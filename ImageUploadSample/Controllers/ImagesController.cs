@@ -6,6 +6,7 @@ using DrawingImaging = System.Drawing.Imaging;
 namespace ImageUploadSample.Controllers;
 
 using Models;
+using System.IO;
 
 public class ImagesController : Controller
 {
@@ -22,8 +23,13 @@ public class ImagesController : Controller
     [HttpPost]
     public async Task<IActionResult> Upload(IFormFile file, string description)
     {
-        if (file == null || file.Length == 0)
+        const int maximumFileSize = 2 * 1024 * 1024; // 2 MB
+
+        if (file == null || file.Length == 0 || file.Length > maximumFileSize)
             return BadRequest("No file selected.");
+
+        if (file.Length > maximumFileSize)
+            return BadRequest("Too large file.");
 
         using var memoryStream = new MemoryStream();
         await file.CopyToAsync(memoryStream);
@@ -33,23 +39,64 @@ public class ImagesController : Controller
             return BadRequest("Invalid image.");
 
         var imageData = memoryStream.ToArray();
-        var (thumbnailData, thumnailWidth, thumnailHeight) = CreateThumbnail(imageData, width, height);
+        await Save(file.ContentType, description, width, height, imageData);
 
-        var image = new Image {
-            Data            = imageData,
-            Width           = width,
-            Height          = height,
-            ThumbnailData   = thumbnailData,
-            ThumbnailWidth  = thumnailWidth,
-            ThumbnailHeight = thumnailHeight,
-            Description     = description,
-            MimeType        = file.ContentType
-        };
+        return RedirectToAction();
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> UploadCameraImage(string imageBase64, string description)
+    {
+        if (string.IsNullOrEmpty(imageBase64))
+            return BadRequest("No image selected.");
+
+        var splitedImageBase64 = SplitImageBase64(imageBase64);
+        if (splitedImageBase64 is null)
+            return BadRequest("Invalid image.");
+
+        var (contentType, base64Text) = splitedImageBase64.Value;
+        var imageData = Convert.FromBase64String(base64Text);
+
+        using var memoryStream = new MemoryStream(imageData);
+        var (width, height) = GetImageDimensions(memoryStream);
+        await Save(contentType, "", width, height, imageData);
+
+        return RedirectToAction("Upload");
+    }
+
+    static (string contentType, string base64Text)? SplitImageBase64(string imageBase64) {
+        string[] parts = imageBase64.Split(';');
+        if (parts.Length < 2)
+            return null;
+
+        var contentType = parts[0].Replace("data:", "");
+        var base64 = imageBase64.Replace($"{parts[0]};base64,", "");
+        return (contentType, base64);
+    }
+
+    async Task Save(string contentType, string description, int width, int height, byte[] imageData)
+    {
+        Image image = ToImage(contentType, description, width, height, imageData);
 
         context.Images.Add(image);
         await context.SaveChangesAsync();
+    }
 
-        return RedirectToAction();
+    static Image ToImage(string contentType, string description, int width, int height, byte[] imageData)
+    {
+        var (thumbnailData, thumnailWidth, thumnailHeight) = CreateThumbnail(imageData, width, height);
+
+        var image = new Image {
+            Data            = imageData     ,
+            Width           = width         ,
+            Height          = height        ,
+            ThumbnailData   = thumbnailData ,
+            ThumbnailWidth  = thumnailWidth ,
+            ThumbnailHeight = thumnailHeight,
+            Description     = description   ,
+            MimeType        = contentType
+        };
+        return image;
     }
 
     // Supported only on Windows 6.1 and later.

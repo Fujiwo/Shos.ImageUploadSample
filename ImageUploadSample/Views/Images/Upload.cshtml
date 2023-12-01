@@ -49,3 +49,109 @@
     </div>
     <button type="submit" class="btn btn-primary">Upload</button>
 </form>
+@* 
+<video autoplay="true" id="videoElement"></video>
+ *@
+
+<form>
+    <div class="form-group">
+        <div class="form-control">
+            <button type="button" id="camera" class="btn btn-primary">Camera</button>
+            <button type="button" id="snap" class="btn btn-secondary" hidden="hidden">Snap</button>
+            <button type="button" id="uploadPicture" class="btn btn-success" hidden="hidden">Upload</button>
+        </div>
+        <div id="videoPreview" class="form-control" hidden="hidden">
+            <video id="video" width="600" height="400" autoplay="autoplay" />
+        </div>
+        <div id="canvasPreview" class="form-control" hidden="hidden">
+            <canvas id="canvas" width="600" height="400" />
+        </div>
+        <input type="text" id="description" class="form-control" hidden="hidden">
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+    window.addEventListener('DOMContentLoaded', main)
+
+    function main() {
+        document.querySelector('#camera').addEventListener('click', startCamera)
+        document.querySelector('#snap').addEventListener('click', snap)
+        document.querySelector('#uploadPicture').addEventListener('click', upload)
+    }
+
+    function startCamera(e) {
+        console.log('startCamera')
+        if (e.cancelable)
+            e.preventDefault()
+
+        const video      = document.querySelector('#video')
+        const resolution = { width: 1080, height: 720 }
+
+        const media = navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                width : { ideal: resolution.width  },
+                height: { ideal: resolution.height }
+            }
+        }).then(function (stream) {
+            video.srcObject = stream
+        }).catch(function (error) {
+            console.error('mediaDevice.getUserMedia() error:', error)
+        })
+
+        document.querySelector('#canvasPreview').hidden = true
+        document.querySelector('#uploadPicture').hidden = true
+        document.querySelector('#videoPreview' ).hidden = false
+        document.querySelector('#snap'         ).hidden = false
+    }
+
+    function snap(e) {
+        console.log('snap')
+        if (e.cancelable)
+            e.preventDefault()
+
+        const context = canvas.getContext('2d')
+        const video   = document.querySelector('#video')
+        context.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+        const tracks = video.srcObject.getTracks()
+        tracks.forEach(track => track.stop())
+
+        document.querySelector('#videoPreview' ).hidden = true
+        document.querySelector('#canvasPreview').hidden = false
+        document.querySelector('#description'  ).hidden = false
+        document.querySelector('#uploadPicture').hidden = false
+    }
+
+    function upload(e) {
+        console.log('upload')
+
+        if (e.cancelable)
+            e.preventDefault()
+
+        const canvas  = document.querySelector('#canvas')
+        const picture = canvas.toDataURL('image/png')
+        console.log('picture length: ' + picture.length);
+        const description = document.querySelector('#description').value
+
+        $.ajax({
+            type: "POST",
+            url: "/Images/UploadCameraImage/",
+            data: {
+                imageBase64: picture,
+                description: description
+            }
+        }).done(function (o) {
+            console.log('saved');
+            location.reload()
+        });
+
+        document.querySelector('#videoPreview' ).hidden = true
+        document.querySelector('#snap'         ).hidden = true
+        document.querySelector('#canvasPreview').hidden = true
+        document.querySelector('#uploadPicture').hidden = true
+        document.querySelector('#description'  ).hidden = true
+    }
+    </script>
+}
