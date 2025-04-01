@@ -7,6 +7,7 @@ namespace ImageUploadSample.Controllers;
 
 using Models;
 using System.IO;
+using System.Runtime.Versioning;
 
 public class ImagesController : Controller
 {
@@ -21,6 +22,7 @@ public class ImagesController : Controller
     }
 
     [HttpPost]
+    [SupportedOSPlatform("windows")]
     public async Task<IActionResult> Upload(IFormFile file, string description)
     {
         const int maximumFileSize = 2 * 1024 * 1024; // 2 MB
@@ -45,6 +47,7 @@ public class ImagesController : Controller
     }
 
     [HttpPost]
+    [SupportedOSPlatform("windows")]
     public async Task<IActionResult> UploadCameraImage(string imageBase64, string description)
     {
         if (string.IsNullOrEmpty(imageBase64))
@@ -74,6 +77,7 @@ public class ImagesController : Controller
         return (contentType, base64);
     }
 
+    [SupportedOSPlatform("windows")]
     async Task Save(string contentType, string description, int width, int height, byte[] imageData)
     {
         Image image = ToImage(contentType, description, width, height, imageData);
@@ -82,6 +86,7 @@ public class ImagesController : Controller
         await context.SaveChangesAsync();
     }
 
+    [SupportedOSPlatform("windows")]
     static Image ToImage(string contentType, string description, int width, int height, byte[] imageData)
     {
         var (thumbnailData, thumnailWidth, thumnailHeight) = CreateThumbnail(imageData, width, height);
@@ -100,6 +105,7 @@ public class ImagesController : Controller
     }
 
     // Supported only on Windows 6.1 and later.
+    [SupportedOSPlatform("windows")]
     (int width, int height) GetImageDimensions(Stream stream)
     {
         var image = new Drawing.Bitmap(stream);
@@ -107,6 +113,7 @@ public class ImagesController : Controller
     }
 
     // Supported only on Windows 6.1 and later.
+    [SupportedOSPlatform("windows")]
     static (byte[], int, int) CreateThumbnail(byte[] imageData, int width, int height)
     {
         const int thumbnailSize = 100;
