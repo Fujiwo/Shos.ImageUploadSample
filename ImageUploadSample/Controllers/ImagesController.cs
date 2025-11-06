@@ -92,13 +92,13 @@ public class ImagesController : Controller
         var (thumbnailData, thumnailWidth, thumnailHeight) = CreateThumbnail(imageData, width, height);
 
         var image = new Image {
-            Data            = imageData     ,
-            Width           = width         ,
-            Height          = height        ,
-            ThumbnailData   = thumbnailData ,
-            ThumbnailWidth  = thumnailWidth ,
-            ThumbnailHeight = thumnailHeight,
-            Description     = description   ,
+            Data            = imageData                  ,
+            Width           = width                      ,
+            Height          = height                     ,
+            ThumbnailData   = thumbnailData              ,
+            ThumbnailWidth  = thumnailWidth              ,
+            ThumbnailHeight = thumnailHeight             ,
+            Description     = description ?? string.Empty,
             MimeType        = contentType
         };
         return image;
