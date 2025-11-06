@@ -58,11 +58,11 @@ dotnet tool install --global dotnet-ef
 dotnet ef database update
 ```
 
-データベース接続文字列は `appsettings.json` で設定されています：
+データベース接続文字列は `appsettings.json` で設定されています。必要に応じてデータベース名を変更できます：
 
 ```json
 "ConnectionStrings": {
-  "ImageContext": "Server=(localdb)\\mssqllocaldb;Database=ImageUploadSample-ecb85b14-ebd2-4744-bec9-be8f021688b7;Trusted_Connection=True;MultipleActiveResultSets=true"
+  "ImageContext": "Server=(localdb)\\mssqllocaldb;Database=ImageUploadSample;Trusted_Connection=True;MultipleActiveResultSets=true"
 }
 ```
 
@@ -72,7 +72,7 @@ dotnet ef database update
 dotnet run
 ```
 
-ブラウザで `https://localhost:5001` (または表示されたURLポート) にアクセスしてください。
+アプリケーションが起動したら、コンソールに表示されるURLをブラウザで開いてください（通常は `https://localhost:5001` または `http://localhost:5000`）。
 
 ## 使い方
 
