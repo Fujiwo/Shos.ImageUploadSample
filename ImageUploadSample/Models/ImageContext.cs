@@ -30,7 +30,9 @@ public class Image
 
 public class ImageContext : DbContext
 {
-    const string connectionString = @"Data Source=.\SQLEXPRESS;Initial Catalog=20231129;Integrated Security=True;TrustServerCertificate=true;";
+    const string connectionString =
+        //@"Data Source=.\SQLEXPRESS;Initial Catalog=20231129;Integrated Security=True;TrustServerCertificate=true;";
+        @"Server=(localdb)\mssqllocaldb;Database=ImageUploadSample-ecb85b14-ebd2-4744-bec9-be8f021688b7;Trusted_Connection=True;MultipleActiveResultSets=true";
 
     public virtual DbSet<Image> Images { get; set; }
 
