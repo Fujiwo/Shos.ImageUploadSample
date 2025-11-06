@@ -125,7 +125,7 @@ ImageUploadSample/
 
 ## 作者
 
-Fujiwo
+Fujio Kojima
 
 ## 参考資料
 
