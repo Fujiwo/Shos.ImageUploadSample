@@ -104,7 +104,7 @@ ImageUploadSample/
 │   └── ImagesController.cs    # 画像アップロードロジック
 ├── Models/
 │   ├── ImageContext.cs         # Entity Framework DbContext
-│   └── ErrorViewModel.cs
+│   └── ErrorViewModel.cs       # エラーハンドリング用ビューモデル
 ├── Views/
 │   └── Images/
 │       └── Upload.cshtml       # 画像アップロードUI
