@@ -4,14 +4,14 @@ ASP.NET Core MVCを使用した画像アップロードのサンプルアプリ�
 
 ## 概要
 
-このプロジェクトは、ASP.NET Core 10.0で構築された画像アップロード機能のデモンストレーションです。Entity Framework Coreを使用してSQL Serverデータベースに画像を保存し、自動的にサムネイルを生成します。
+このプロジェクトは、ASP.NET Core 10.0で構築された画像アップロード機能のデモンストレーションです。Entity Framework Coreを使用してSQL Serverデータベースに画像を保存し、SkiaSharpで自動的にサムネイル（高さ100px）を生成します。
 
 ## 主な機能
 
 - **ファイルアップロード**: ローカルファイルから画像を選択してアップロード
 - **カメラ撮影**: ブラウザのカメラAPIを使用してリアルタイムで写真を撮影してアップロード
 - **サムネイル生成**: アップロードされた画像の自動サムネイル作成
-- **画像一覧表示**: アップロードされた全画像のサムネイルと詳細表示
+- **画像一覧表示**: アップロードされた画像のサムネイルと詳細表示（新しい順、1ページ24件のページング）
 - **データベース保存**: Entity Framework Coreを使用したSQL Serverへの画像データ保存
 
 ## 技術スタック
@@ -19,14 +19,15 @@ ASP.NET Core MVCを使用した画像アップロードのサンプルアプリ�
 - **フレームワーク**: ASP.NET Core 10.0 MVC
 - **データベース**: SQL Server (LocalDB)
 - **ORM**: Entity Framework Core 10.0
-- **画像処理**: System.Drawing.Common 10.0
+- **画像処理**: SkiaSharp (MIT ライセンス、クロスプラットフォーム)
+- **テスト**: xUnit, Microsoft.AspNetCore.Mvc.Testing, SQLite (インメモリ)
 - **フロントエンド**: HTML5, JavaScript, jQuery, Bootstrap
 
 ## 必要な環境
 
 - [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- SQL Server LocalDB (Visual Studio 2022に付属)
-- Windows OS (System.Drawing.Commonの使用により Windows 6.1以降が必要)
+- SQL Server LocalDB (Visual Studio に付属、Windows のみ)
+  - Linux / macOS では SQL Server (Docker コンテナなど) を用意し、接続文字列を変更してください
 - 対応ブラウザ (カメラ機能にはWebRTC対応ブラウザが必要)
 
 ## インストール手順
@@ -58,12 +59,23 @@ dotnet tool install --global dotnet-ef
 dotnet ef database update
 ```
 
-データベース接続文字列は `appsettings.json` で設定されています。必要に応じてデータベース名を変更できます：
+データベース接続文字列は `appsettings.json` の `ConnectionStrings:ImageContext` で設定されています。接続先やデータベース名はここで変更できます（既定のデータベース名は `ImageUploadSample-ecb85b14-...` のように GUID 付きです）：
 
 ```json
 "ConnectionStrings": {
-  "ImageContext": "Server=(localdb)\\mssqllocaldb;Database=ImageUploadSample;Trusted_Connection=True;MultipleActiveResultSets=true"
+  "ImageContext": "Server=(localdb)\\mssqllocaldb;Database=ImageUploadSample-ecb85b14-ebd2-4744-bec9-be8f021688b7;Trusted_Connection=True;MultipleActiveResultSets=true"
 }
+```
+
+`dotnet ef` も `Program.cs` の設定を使うため、`dotnet ef database update` も同じ接続先に対して実行されます。
+
+エンティティ（`Models/ImageContext.cs` の `ImageRecord`）を変更した場合は、マイグレーションを追加してから適用します：
+
+```bash
+dotnet ef --version                       # ツールのバージョン確認
+dotnet tool update --global dotnet-ef     # ツールの更新
+dotnet ef migrations add <マイグレーション名>
+dotnet ef database update
 ```
 
 ### 4. アプリケーションの起動
@@ -72,7 +84,7 @@ dotnet ef database update
 dotnet run
 ```
 
-アプリケーションが起動したら、コンソールに表示されるURLをブラウザで開いてください（通常は `https://localhost:5001` または `http://localhost:5000`）。
+アプリケーションが起動したら、コンソールに表示されるURLをブラウザで開いてください（`launchSettings.json` の設定では `https://localhost:7020` または `http://localhost:5257`）。
 
 ## 使い方
 
@@ -93,7 +105,7 @@ dotnet run
 
 ### 画像の表示
 
-- アップロードされた画像はサムネイルとして上部に表示されます
+- アップロードされた画像はサムネイルとして上部に表示されます（24件を超えるとページングされます）
 - サムネイルをクリックすると、ページ下部のフルサイズ画像にジャンプします
 
 ## プロジェクト構成
@@ -101,23 +113,38 @@ dotnet run
 ```
 ImageUploadSample/
 ├── Controllers/
-│   └── ImagesController.cs    # 画像アップロードロジック
+│   └── ImagesController.cs    # アップロード、一覧、画像配信 (Thumbnail / Original)、エラーページ
 ├── Models/
-│   ├── ImageContext.cs         # Entity Framework DbContext
+│   ├── ImageContext.cs         # エンティティ ImageRecord と DbContext
+│   ├── ImageListViewModel.cs   # 一覧表示用ビューモデル
 │   └── ErrorViewModel.cs       # エラーハンドリング用ビューモデル
+├── Services/
+│   └── ImageProcessor.cs       # 画像の検証、寸法取得、サムネイル生成、data URL の解析
 ├── Views/
 │   └── Images/
 │       └── Upload.cshtml       # 画像アップロードUI
 ├── Migrations/                 # EF Core マイグレーション
 ├── appsettings.json           # 設定ファイル
 └── Program.cs                 # アプリケーションエントリポイント
+ImageUploadSample.Tests/        # 単体テストと結合テスト (xUnit)
 ```
+
+## テスト
+
+```bash
+dotnet test
+```
+
+結合テストは `WebApplicationFactory` を使い、SQL Server の代わりにインメモリの SQLite で実行されるため、Windows 以外でも動作します。GitHub Actions (`.github/workflows/build.yml`) でもビルドとテストを実行しています。
 
 ## 制限事項
 
-- 最大ファイルサイズ: 2MB
-- サポート対象OS: Windows 6.1以降 (System.Drawing.Common の要件)
+- 最大ファイルサイズ: 2MB（ファイル、カメラとも）
+- 最大画像サイズ: 幅・高さともに 8000px
+- 対応形式: PNG, JPEG, GIF, BMP, WebP（MIME 型はファイルの内容から判定します）
+- 説明文: 最大 200 文字
 - カメラ機能: HTTPS環境とWebRTC対応ブラウザが必要
+- **認証・認可はありません**。誰でも画像をアップロードでき、アップロードされた画像はすべて誰にでも公開されます。学習・デモ用のサンプルとして使用し、そのまま公開環境で運用しないでください
 
 ## ライセンス
 
@@ -131,4 +158,4 @@ Fujio Kojima
 
 - [ASP.NET Core Documentation](https://docs.microsoft.com/aspnet/core/)
 - [Entity Framework Core Documentation](https://docs.microsoft.com/ef/core/)
-- [System.Drawing.Common](https://docs.microsoft.com/dotnet/api/system.drawing)
+- [SkiaSharp](https://github.com/mono/SkiaSharp)

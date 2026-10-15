@@ -1,17 +1,6 @@
-﻿@model List<Image>
+@model ImageListViewModel
 @{
     ViewData["Title"] = "Upload Image";
-
-    var imageViewModels = Model.Select((image, index) => new {
-        Id              = index + 1,
-        AlternativeText = $"{image.Description} ({image.MimeType})",
-        Source          = $"data:{image.MimeType};base64,{Convert.ToBase64String(image.Data)}",
-        Width           = image.Width,
-        Height          = image.Height,
-        ThumbnailSource = $"data:image/png;base64,{Convert.ToBase64String(image.ThumbnailData)}",
-        ThumbnailWidth  = image.ThumbnailWidth,
-        ThumbnailHeight = image.ThumbnailHeight
-    }).ToList();
 }
 
 <h2>@ViewData["Title"]</h2>
@@ -19,21 +8,32 @@
 <div>
     <hr>
     <div class="row">
-        @foreach (var imageViewModel in imageViewModels) {
+        @foreach (var image in Model.Images) {
             <div class="col-md-1">
-                <a href="#image@(imageViewModel.Id)" class="thumbnail">
-                    <img src="@imageViewModel.ThumbnailSource" width="@(imageViewModel.ThumbnailWidth)" height="@(imageViewModel.ThumbnailHeight)" alt="@imageViewModel.AlternativeText" class="img-thumbnail" />
+                <a href="#image@(image.Id)" class="thumbnail">
+                    <img src="@Url.Action("Thumbnail", new { id = image.Id })" width="@(image.ThumbnailWidth)" height="@(image.ThumbnailHeight)" alt="@image.AlternativeText" class="img-thumbnail" />
                 </a>
             </div>
         }
     </div>
+    @if (Model.TotalPages > 1) {
+        <nav aria-label="Image pages">
+            <ul class="pagination">
+                @for (var pageNumber = 1; pageNumber <= Model.TotalPages; pageNumber++) {
+                    <li class="page-item @(pageNumber == Model.Page ? "active" : "")">
+                        <a class="page-link" asp-action="Upload" asp-route-page="@pageNumber">@pageNumber</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
     <hr>
     <div>
-        @foreach (var imageViewModel in imageViewModels) {
-            <div id="image@(imageViewModel.Id)">
+        @foreach (var image in Model.Images) {
+            <div id="image@(image.Id)">
                 <figure class="figure">
-                    <img src="@(imageViewModel.Source)" width="@(imageViewModel.Width)" height="@(imageViewModel.Height)" alt="@(imageViewModel.AlternativeText)" class="card-img-top" />
-                    <figcaption class="figure-caption">@imageViewModel.AlternativeText</figcaption>
+                    <img src="@Url.Action("Original", new { id = image.Id })" width="@(image.Width)" height="@(image.Height)" alt="@(image.AlternativeText)" class="card-img-top" loading="lazy" />
+                    <figcaption class="figure-caption">@image.AlternativeText</figcaption>
                 </figure>
             </div>
         }
@@ -44,14 +44,12 @@
 <form method="post" enctype="multipart/form-data">
     <div class="form-group">
         <label for="file" class="form-label">Choose Image</label>
-        <input type="file" name="file" class="form-control">
-        <input type="text" name="description" class="form-control">
+        <input type="file" id="file" name="file" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" class="form-control">
+        <label for="fileDescription" class="form-label">Description</label>
+        <input type="text" id="fileDescription" name="description" maxlength="@ImageRecord.DescriptionMaxLength" placeholder="Description (optional)" class="form-control">
     </div>
     <button type="submit" class="btn btn-primary">Upload</button>
 </form>
-@* 
-<video autoplay="true" id="videoElement"></video>
- *@
 
 <form>
     <div class="form-group">
@@ -61,12 +59,15 @@
             <button type="button" id="uploadPicture" class="btn btn-success" hidden="hidden">Upload</button>
         </div>
         <div id="videoPreview" class="form-control" hidden="hidden">
-            <video id="video" width="600" height="400" autoplay="autoplay" />
+            <video id="video" width="600" height="400" autoplay="autoplay"></video>
         </div>
         <div id="canvasPreview" class="form-control" hidden="hidden">
-            <canvas id="canvas" width="600" height="400" />
+            <canvas id="canvas" width="600" height="400"></canvas>
         </div>
-        <input type="text" id="description" class="form-control" hidden="hidden">
+        <div id="descriptionGroup" hidden="hidden">
+            <label for="description" class="form-label">Description</label>
+            <input type="text" id="description" maxlength="@ImageRecord.DescriptionMaxLength" placeholder="Description (optional)" class="form-control">
+        </div>
     </div>
 </form>
 
@@ -74,84 +75,96 @@
     <script>
     window.addEventListener('DOMContentLoaded', main)
 
+    let currentStream = null
+
     function main() {
         document.querySelector('#camera').addEventListener('click', startCamera)
         document.querySelector('#snap').addEventListener('click', snap)
         document.querySelector('#uploadPicture').addEventListener('click', upload)
     }
 
+    function stopCamera() {
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop())
+            currentStream = null
+        }
+    }
+
     function startCamera(e) {
-        console.log('startCamera')
         if (e.cancelable)
             e.preventDefault()
+
+        stopCamera()
 
         const video      = document.querySelector('#video')
         const resolution = { width: 1080, height: 720 }
 
-        const media = navigator.mediaDevices.getUserMedia({
+        navigator.mediaDevices.getUserMedia({
             audio: false,
             video: {
                 width : { ideal: resolution.width  },
                 height: { ideal: resolution.height }
             }
         }).then(function (stream) {
+            currentStream   = stream
             video.srcObject = stream
         }).catch(function (error) {
             console.error('mediaDevice.getUserMedia() error:', error)
+            alert('Could not start the camera.')
         })
 
-        document.querySelector('#canvasPreview').hidden = true
-        document.querySelector('#uploadPicture').hidden = true
-        document.querySelector('#videoPreview' ).hidden = false
-        document.querySelector('#snap'         ).hidden = false
+        document.querySelector('#canvasPreview'   ).hidden = true
+        document.querySelector('#uploadPicture'   ).hidden = true
+        document.querySelector('#descriptionGroup').hidden = true
+        document.querySelector('#videoPreview'    ).hidden = false
+        document.querySelector('#snap'            ).hidden = false
     }
 
     function snap(e) {
-        console.log('snap')
-        if (e.cancelable)
-            e.preventDefault()
-
-        const context = canvas.getContext('2d')
-        const video   = document.querySelector('#video')
-        context.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-        const tracks = video.srcObject.getTracks()
-        tracks.forEach(track => track.stop())
-
-        document.querySelector('#videoPreview' ).hidden = true
-        document.querySelector('#canvasPreview').hidden = false
-        document.querySelector('#description'  ).hidden = false
-        document.querySelector('#uploadPicture').hidden = false
-    }
-
-    function upload(e) {
-        console.log('upload')
-
         if (e.cancelable)
             e.preventDefault()
 
         const canvas  = document.querySelector('#canvas')
-        const picture = canvas.toDataURL('image/png')
-        console.log('picture length: ' + picture.length);
-        const description = document.querySelector('#description').value
+        const context = canvas.getContext('2d')
+        const video   = document.querySelector('#video')
+        context.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+        stopCamera()
+
+        document.querySelector('#videoPreview'    ).hidden = true
+        document.querySelector('#snap'            ).hidden = true
+        document.querySelector('#canvasPreview'   ).hidden = false
+        document.querySelector('#descriptionGroup').hidden = false
+        document.querySelector('#uploadPicture'   ).hidden = false
+    }
+
+    function upload(e) {
+        if (e.cancelable)
+            e.preventDefault()
+
+        const uploadButton = document.querySelector('#uploadPicture')
+        const canvas       = document.querySelector('#canvas')
+        const picture      = canvas.toDataURL('image/png')
+        const description  = document.querySelector('#description').value
+        const token        = document.querySelector('input[name="__RequestVerificationToken"]').value
+
+        uploadButton.disabled = true
 
         $.ajax({
-            type: "POST",
-            url: "/Images/UploadCameraImage/",
+            type: 'POST',
+            url: '@Url.Action("UploadCameraImage")',
+            headers: { RequestVerificationToken: token },
             data: {
                 imageBase64: picture,
                 description: description
             }
-        }).done(function (o) {
-            console.log('saved');
-            location.reload()
-        });
-
-        document.querySelector('#videoPreview' ).hidden = true
-        document.querySelector('#snap'         ).hidden = true
-        document.querySelector('#canvasPreview').hidden = true
-        document.querySelector('#uploadPicture').hidden = true
-        document.querySelector('#description'  ).hidden = true
+        }).done(function () {
+            location.href = '@Url.Action("Upload")'
+        }).fail(function (xhr) {
+            alert('Upload failed: ' + (xhr.responseText || xhr.statusText))
+        }).always(function () {
+            uploadButton.disabled = false
+        })
     }
     </script>
 }

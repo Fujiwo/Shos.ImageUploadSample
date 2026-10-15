@@ -4,32 +4,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-ASP.NET Core 10.0 MVC sample app (single project `ImageUploadSample/`, solution `Shos.ImageUploadSample.sln`) that uploads images, from a file or from the browser camera, and stores them, along with generated thumbnails, in SQL Server (LocalDB) via EF Core 8. README and commit messages are in Japanese.
+ASP.NET Core 10.0 MVC sample app (solution `Shos.ImageUploadSample.sln`: app `ImageUploadSample/`, tests `ImageUploadSample.Tests/`) that uploads images, from a file or from the browser camera, and stores them, along with generated thumbnails, in SQL Server (LocalDB) via EF Core 10. README and commit messages are in Japanese.
 
 ## Commands
 
-Run these from `ImageUploadSample/`:
-
 ```bash
-dotnet build
-dotnet run                       # launch profiles: http://localhost:5257, https://localhost:7020
-dotnet ef database update        # apply migrations (requires: dotnet tool install --global dotnet-ef)
-dotnet ef migrations add <Name>  # after changing the Image entity
+dotnet build                     # from the repo root (solution) or ImageUploadSample/
+dotnet test                      # from the repo root; runs on any OS (SQLite in-memory)
+dotnet run                       # from ImageUploadSample/; http://localhost:5257, https://localhost:7020
+dotnet ef database update        # from ImageUploadSample/ (requires: dotnet tool install --global dotnet-ef)
+dotnet ef migrations add <Name>  # after changing the ImageRecord entity
 ```
 
-There is no test project and no lint configuration.
+CI (`.github/workflows/build.yml`) runs restore, build, test, and a vulnerable-package check on `ubuntu-latest`. There is no lint configuration.
 
-## Platform constraints
+## Platform notes
 
-- Runs on Windows only. Image dimension and thumbnail code uses `System.Drawing.Common` (`Bitmap`, `GetThumbnailImage`), and those methods carry `[SupportedOSPlatform("windows")]`. Under WSL/Linux the project builds, but uploads fail at runtime. LocalDB is Windows-only too.
-- Running the app or EF migrations needs a Windows `dotnet` with LocalDB available.
+- Image processing uses SkiaSharp (with `SkiaSharp.NativeAssets.Linux.NoDependencies`), so the app and tests run on Windows and Linux.
+- The default connection string targets LocalDB, which is Windows-only. Running the app elsewhere needs a different SQL Server connection string in `appsettings.json`.
+- In WSL, `ImageUploadSample/obj` may hold a Windows-side build cache that the Linux SDK can't read. Build with `--artifacts-path <dir>` to keep the two separate.
+- Avoid ImageSharp: 3.x has unpatched vulnerabilities, and 4.x requires a license key at build time.
+- `System.Security.Cryptography.Pkcs` is referenced only to pin a vulnerable transitive dependency (see the comment in the csproj).
 
 ## Architecture
 
-- The default route is `{controller=Images}/{action=Upload}/{id?}`. `ImagesController` is the only controller. Note that there is no `HomeController`, even though `Program.cs` points the non-Development exception handler at `/Home/Error`.
-- `ImagesController` has two upload paths that share `Save` → `ToImage` → `CreateThumbnail`:
-  - `POST Upload(IFormFile file, string description)`: a multipart form upload, limited to 2 MB.
-  - `POST UploadCameraImage(string imageBase64, string description)`: called by jQuery `$.ajax` from inline JS in `Views/Images/Upload.cshtml`. The JS captures `getUserMedia` video to a canvas and posts a `data:image/png;base64,...` URL, which `SplitImageBase64` parses. This path currently saves `""` as the description and ignores the parameter.
-- `Models/ImageContext.cs` holds both the `Image` entity (original bytes plus a PNG thumbnail scaled to a fixed height of 100px, stored as `byte[]` columns) and `ImageContext`.
-- **Connection string gotcha:** `ImageContext.OnConfiguring` unconditionally calls `UseSqlServer` with a hard-coded connection string and sets up Debug logging. As a result, the `ConnectionStrings:ImageContext` value from `appsettings.json` registered in `Program.cs` is effectively overridden. To change the database, update both places, or make `OnConfiguring` respect `optionsBuilder.IsConfigured`.
-- `Upload.cshtml` renders every image (full size and thumbnail) inline as base64 data URIs from `context.Images.ToListAsync()`. There is no paging and no separate image-serving endpoint.
+- The default route is `{controller=Images}/{action=Upload}/{id?}`. `ImagesController` is the only controller and also hosts `Error` (the non-Development exception handler is `/Images/Error`).
+- `Services/ImageProcessor.cs` holds all image logic: header-only dimension check (max 8000px, max 2 MB), format detection (the MIME type comes from the content, not from the client), single decode for the 100px-high PNG thumbnail, and strict `data:image/...;base64,` parsing. Failures throw `InvalidImageException`, which the controller turns into 400.
+- `ImagesController` upload paths both go through `Save`:
+  - `POST Upload(IFormFile file, string description)`: a multipart form, redirects to the list.
+  - `POST UploadCameraImage(string imageBase64, string description)`: called by jQuery `$.ajax` from inline JS in `Views/Images/Upload.cshtml`, and returns 204.
+- Antiforgery validation is global (`AutoValidateAntiforgeryTokenAttribute`). The camera Ajax call sends the token in the `RequestVerificationToken` header.
+- The list (`GET Upload?page=n`) projects to `ImageSummary` (no blobs) with 24 items per page. Images are served by `GET Images/Thumbnail/{id}` and `GET Images/Original/{id}`.
+- `Models/ImageContext.cs` holds the `ImageRecord` entity (table `Images`) and `ImageContext`, which takes options only. The connection string comes solely from `ConnectionStrings:ImageContext`, and `dotnet ef` picks it up through `Program.cs`.
+- Integration tests (`TestApplicationFactory`) swap the SQL Server registration for in-memory SQLite by removing `DbContextOptions<ImageContext>` and `IDbContextOptionsConfiguration<ImageContext>`.

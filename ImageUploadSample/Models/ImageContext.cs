@@ -1,53 +1,29 @@
-﻿//ex. ef.cmd [プロジェクト名]
-//cd % 1
-//dotnet ef --version
-//dotnet tool update --global dotnet-ef
-//dotnet ef migrations add InitialCreate
-//dotnet ef database update
-
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 
 namespace ImageUploadSample.Models;
 
-public class Image
+public class ImageRecord
 {
+    public const int DescriptionMaxLength = 200;
+
     public int Id { get; set; }
 
     [Required]
-    public byte[] Data { get; set; } = new byte[] {};
+    public byte[] Data { get; set; } = [];
     public int Width { get; set; }
     public int Height { get; set; }
-    public byte[] ThumbnailData { get; set; } = new byte[] {};
+    public byte[] ThumbnailData { get; set; } = [];
     public int ThumbnailWidth { get; set; }
     public int ThumbnailHeight { get; set; }
+    [MaxLength(DescriptionMaxLength)]
     public string Description { get; set; } = string.Empty;
+    [MaxLength(32)]
     public string MimeType { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
-public class ImageContext : DbContext
+public class ImageContext(DbContextOptions<ImageContext> options) : DbContext(options)
 {
-    const string connectionString =
-        //@"Data Source=.\SQLEXPRESS;Initial Catalog=20231129;Integrated Security=True;TrustServerCertificate=true;";
-        @"Server=(localdb)\mssqllocaldb;Database=ImageUploadSample-ecb85b14-ebd2-4744-bec9-be8f021688b7;Trusted_Connection=True;MultipleActiveResultSets=true";
-
-    public virtual DbSet<Image> Images { get; set; }
-
-    public ImageContext()
-    {}
-
-    public ImageContext(DbContextOptions<ImageContext> options)
-         : base(options)
-    {}
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder
-        .UseSqlServer(connectionString)
-        .LogTo(message => Debug.WriteLine(message),
-               new[] { DbLoggerCategory.Database.Name },
-               LogLevel.Debug,
-               DbContextLoggerOptions.LocalTime);
+    public DbSet<ImageRecord> Images { get; set; } = null!;
 }
