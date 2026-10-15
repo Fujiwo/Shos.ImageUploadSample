@@ -4,7 +4,7 @@ ASP.NET Core MVCを使用した画像アップロードのサンプルアプリ�
 
 ## 概要
 
-このプロジェクトは、ASP.NET Core 8.0で構築された画像アップロード機能のデモンストレーションです。Entity Framework Coreを使用してSQL Serverデータベースに画像を保存し、自動的にサムネイルを生成します。
+このプロジェクトは、ASP.NET Core 10.0で構築された画像アップロード機能のデモンストレーションです。Entity Framework Coreを使用してSQL Serverデータベースに画像を保存し、自動的にサムネイルを生成します。
 
 ## 主な機能
 
@@ -16,15 +16,15 @@ ASP.NET Core MVCを使用した画像アップロードのサンプルアプリ�
 
 ## 技術スタック
 
-- **フレームワーク**: ASP.NET Core 8.0 MVC
+- **フレームワーク**: ASP.NET Core 10.0 MVC
 - **データベース**: SQL Server (LocalDB)
-- **ORM**: Entity Framework Core 8.0
-- **画像処理**: System.Drawing.Common 8.0
+- **ORM**: Entity Framework Core 10.0
+- **画像処理**: System.Drawing.Common 10.0
 - **フロントエンド**: HTML5, JavaScript, jQuery, Bootstrap
 
 ## 必要な環境
 
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - SQL Server LocalDB (Visual Studio 2022に付属)
 - Windows OS (System.Drawing.Commonの使用により Windows 6.1以降が必要)
 - 対応ブラウザ (カメラ機能にはWebRTC対応ブラウザが必要)
