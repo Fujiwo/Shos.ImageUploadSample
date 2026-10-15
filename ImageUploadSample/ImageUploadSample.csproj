@@ -13,7 +13,13 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
-    <PackageReference Include="System.Drawing.Common" Version="10.0.13" />
+    <PackageReference Include="SkiaSharp" Version="4.153.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
+    <!--
+      Not used directly. Pins the transitive dependency (Microsoft.EntityFrameworkCore.SqlServer → Microsoft.Data.SqlClient)
+      above 9.0.11, which has known vulnerabilities (GHSA-846f-f764-76mx, GHSA-2fmv-rv2c-59x7).
+      Before removing it, check the vulnerable-package report of "dotnet list package" (with transitive packages).
+    -->
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
   </ItemGroup>
 
