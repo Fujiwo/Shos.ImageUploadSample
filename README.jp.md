@@ -10,8 +10,8 @@ ASP.NET Core 10.0 MVC で作った画像アップロードのサンプルアプ�
 
 | テーマ | このサンプルでの実装 |
 |---|---|
-| **安全な画像の検証** | まず画像のヘッダーだけを読み、2 MB や 8000px を超えるものはデコード前に拒否します（解凍爆弾対策）。MIME 型はクライアントの申告ではなく、ファイルの内容から判定します。 |
-| **効率的な画像処理** | アップロードごとのデコードは 1 回だけで、SkiaSharp で高さ 100px の PNG サムネイルを作ります。 |
+| **安全な画像の検証** | まず画像のヘッダーだけを読み、2 MB、幅・高さいずれかが 8000px、または総画素数が 16 メガピクセルを超えるものはデコード前に拒否します（解凍爆弾対策）。MIME 型はクライアントの申告ではなく、ファイルの内容から判定します。 |
+| **効率的な画像処理** | アップロードごとのデコードは 1 回だけで、アスペクト比を維持した最大 800×100px の PNG サムネイルを SkiaSharp で作ります。 |
 | **軽い一覧ページ** | 一覧のクエリは画像データを含まない `ImageSummary` に射影します。ページを開いた時点ではサムネイルだけを読み込み、オリジナル画像はサムネイルをクリックしたときに取得してモーダルで表示します。 |
 | **効率的な削除** | 確認ダイアログのあと、`ExecuteDeleteAsync` で画像データを読み込まずに行（サムネイルとオリジナル）を削除します。 |
 | **CSRF 対策** | 偽造防止トークンの検証を全体に適用しています。カメラ画像のアップロードでは、`$.ajax` がトークンをリクエストヘッダーで送ります。 |
@@ -60,7 +60,9 @@ classDiagram
         <<static>>
         +int MaximumFileSize$
         +int MaximumDimension$
+        +long MaximumPixelCount$
         +int ThumbnailSize$
+        +int MaximumThumbnailWidth$
         +Process(byte[] imageData) ProcessedImage$
         +GetThumbnailSize(int width, int height) ValueTuple~int,int~$
         +ParseDataUrl(string dataUrl) byte[]$
@@ -313,6 +315,8 @@ dotnet test
 
 - 最大ファイルサイズ: 2 MB（ファイル、カメラとも）
 - 最大画像サイズ: 幅・高さとも 8000px
+- 最大総画素数: 16 メガピクセル
+- サムネイルの最大サイズ: 800×100px
 - 対応形式: PNG、JPEG、GIF、BMP、WebP（内容から判定）
 - 説明文: 最大 200 文字
 - カメラ機能: HTTPS（または localhost）と WebRTC 対応ブラウザーが必要
