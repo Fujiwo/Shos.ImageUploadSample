@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-ASP.NET Core 10.0 MVC sample app (solution `Shos.ImageUploadSample.sln`: app `ImageUploadSample/`, tests `ImageUploadSample.Tests/`) that uploads images, from a file or from the browser camera, and stores them, along with generated thumbnails, in SQL Server (LocalDB) via EF Core 10. README and commit messages are in Japanese.
+ASP.NET Core 10.0 MVC sample app (solution `Shos.ImageUploadSample.sln`: app `ImageUploadSample/`, tests `ImageUploadSample.Tests/`) that uploads images, from a file or from the browser camera, and stores them, along with generated thumbnails, in SQL Server (LocalDB) via EF Core 10. `README.md` is in English and `README.jp.md` is its Japanese counterpart; keep the two in sync. Commit messages are in Japanese.
 
 ## Commands
 
