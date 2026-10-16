@@ -158,6 +158,59 @@ public partial class ImagesControllerTests : IDisposable
         Assert.DoesNotContain($"src=\"/Images/Original/{id}\"", html);
     }
 
+    async Task<HttpResponseMessage> PostDeleteAsync(int id, bool withToken = true)
+    {
+        var fields = new Dictionary<string, string>();
+        if (withToken)
+            fields["__RequestVerificationToken"] = await GetAntiforgeryTokenAsync();
+        using var content = new FormUrlEncodedContent(fields);
+        return await client.PostAsync($"/Images/Delete/{id}?page=1", content);
+    }
+
+    [Fact]
+    public async Task Index_ShowsDeleteFormForEachImage()
+    {
+        await PostFileAsync(TestImages.Create(10, 10));
+        var id = Assert.Single(factory.GetImages()).Id;
+
+        var html = await client.GetStringAsync("/");
+
+        Assert.Contains($"action=\"/Images/Delete/{id}?page=1\"", html);
+    }
+
+    [Fact]
+    public async Task Delete_RemovesImageAndThumbnail()
+    {
+        await PostFileAsync(TestImages.Create(10, 10));
+        var id = Assert.Single(factory.GetImages()).Id;
+
+        var response = await PostDeleteAsync(id);
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Empty(factory.GetImages());
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/Images/Thumbnail/{id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/Images/Original/{id}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_WithoutAntiforgeryToken_IsRejected()
+    {
+        await PostFileAsync(TestImages.Create(10, 10));
+        var id = Assert.Single(factory.GetImages()).Id;
+
+        var response = await PostDeleteAsync(id, withToken: false);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Single(factory.GetImages());
+    }
+
+    [Fact]
+    public async Task Delete_UnknownId_ReturnsNotFound()
+    {
+        var response = await PostDeleteAsync(12345);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     [Fact]
     public async Task Thumbnail_UnknownId_ReturnsNotFound()
     {

@@ -16,6 +16,10 @@
                    data-caption="@image.AlternativeText" data-width="@image.Width" data-height="@image.Height">
                     <img src="@Url.Action("Thumbnail", new { id = image.Id })" width="@(image.ThumbnailWidth)" height="@(image.ThumbnailHeight)" alt="@image.AlternativeText" class="img-thumbnail" />
                 </a>
+                <form method="post" asp-action="Delete" asp-route-id="@image.Id" asp-route-page="@Model.Page"
+                      class="delete-form mt-1" data-caption="@image.AlternativeText">
+                    <button type="submit" class="btn btn-sm btn-outline-danger w-100">Delete</button>
+                </form>
             </div>
         }
     </div>
@@ -92,6 +96,13 @@
         const originalModal = document.querySelector('#originalModal')
         originalModal.addEventListener('show.bs.modal', showOriginal)
         originalModal.addEventListener('hidden.bs.modal', clearOriginal)
+
+        document.querySelectorAll('.delete-form').forEach(form => form.addEventListener('submit', confirmDelete))
+    }
+
+    function confirmDelete(e) {
+        if (!confirm(`Delete this image?\n${e.currentTarget.dataset.caption}`))
+            e.preventDefault()
     }
 
     function showOriginal(e) {
