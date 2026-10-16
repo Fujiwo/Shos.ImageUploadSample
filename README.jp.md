@@ -146,8 +146,8 @@ erDiagram
         int Width "ピクセル"
         int Height "ピクセル"
         varbinary ThumbnailData "max, PNG サムネイル"
-        int ThumbnailWidth "ピクセル"
-        int ThumbnailHeight "ピクセル, 常に 100"
+        int ThumbnailWidth "ピクセル, 最大 800"
+        int ThumbnailHeight "ピクセル, 最大 100"
         nvarchar Description "200"
         nvarchar MimeType "32, 内容から判定"
         datetime2 CreatedAt "UTC"
@@ -300,7 +300,12 @@ ImageUploadSample/
 ├── appsettings.json            # 設定 (接続文字列)
 └── Program.cs                  # エントリポイント
 ImageUploadSample.Tests/        # 単体テストと結合テスト (xUnit)
-.github/workflows/build.yml     # CI: 復元、ビルド、テスト、脆弱なパッケージの検査
+.github/
+├── workflows/build.yml         # CI: 復元、ビルド、テスト、脆弱なパッケージの検査
+└── copilot-instructions.md     # GitHub Copilot 向けの指示 (CLAUDE.md と同内容)
+CLAUDE.md                       # Claude Code 向けの指示
+Reviews/                        # コードレビューの記録
+docs/                           # 設計メモ
 ```
 
 ## テスト
@@ -309,7 +314,7 @@ ImageUploadSample.Tests/        # 単体テストと結合テスト (xUnit)
 dotnet test
 ```
 
-結合テストは `WebApplicationFactory` を使い、SQL Server をインメモリの SQLite に置き換えるので、どの OS でも動きます。GitHub Actions（`.github/workflows/build.yml`）では、Ubuntu 上でビルド、テスト、脆弱なパッケージの検査を実行しています。
+結合テストは `WebApplicationFactory` を使い、SQL Server をインメモリの SQLite に置き換えるので、どの OS でも動きます。GitHub Actions（`.github/workflows/build.yml`）では、Ubuntu 上でビルド、テスト、脆弱なパッケージの検査を実行しています。脆弱な NuGet パッケージ（推移的な依存関係を含む）が報告されると、ジョブは失敗します。
 
 ## 制限事項
 

@@ -146,8 +146,8 @@ erDiagram
         int Width "pixels"
         int Height "pixels"
         varbinary ThumbnailData "max, PNG thumbnail"
-        int ThumbnailWidth "pixels"
-        int ThumbnailHeight "pixels, always 100"
+        int ThumbnailWidth "pixels, up to 800"
+        int ThumbnailHeight "pixels, up to 100"
         nvarchar Description "200"
         nvarchar MimeType "32, detected from content"
         datetime2 CreatedAt "UTC"
@@ -300,7 +300,12 @@ ImageUploadSample/
 ├── appsettings.json            # Settings (connection string)
 └── Program.cs                  # Entry point
 ImageUploadSample.Tests/        # Unit and integration tests (xUnit)
-.github/workflows/build.yml     # CI: restore, build, test, vulnerable-package check
+.github/
+├── workflows/build.yml         # CI: restore, build, test, vulnerable-package check
+└── copilot-instructions.md     # Guidance for GitHub Copilot (same as CLAUDE.md)
+CLAUDE.md                       # Guidance for Claude Code
+Reviews/                        # Code review records
+docs/                           # Design notes
 ```
 
 ## Tests
@@ -309,7 +314,7 @@ ImageUploadSample.Tests/        # Unit and integration tests (xUnit)
 dotnet test
 ```
 
-The integration tests use `WebApplicationFactory` and replace SQL Server with in-memory SQLite, so they run on any OS. GitHub Actions (`.github/workflows/build.yml`) runs the build, the tests and a vulnerable-package check on Ubuntu.
+The integration tests use `WebApplicationFactory` and replace SQL Server with in-memory SQLite, so they run on any OS. GitHub Actions (`.github/workflows/build.yml`) runs the build, the tests and a vulnerable-package check on Ubuntu. The job fails if any vulnerable NuGet package (including transitive ones) is reported.
 
 ## Limitations
 
