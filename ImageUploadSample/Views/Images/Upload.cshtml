@@ -5,14 +5,17 @@
 
 <h1 class="h2 mb-3">@ViewData["Title"]</h1>
 
+@* Upload forms: from a file (left) and from the camera (right). They sit side by side on large screens. *@
 <div class="row g-3 mb-4">
     <div class="col-12 col-lg-6">
         <div class="card h-100">
             <div class="card-header">File</div>
             <div class="card-body">
+                @* A normal form post to POST Upload. The form tag helper adds the antiforgery token. *@
                 <form method="post" enctype="multipart/form-data">
                     <div class="mb-3">
                         <label for="file" class="form-label">Choose Image</label>
+                        @* accept only filters the file dialog; the server detects the real format from the content. *@
                         <input type="file" id="file" name="file" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" class="form-control">
                     </div>
                     <div class="mb-3">
@@ -28,7 +31,10 @@
         <div class="card h-100">
             <div class="card-header">Camera</div>
             <div class="card-body">
+                @* Not submitted: the script below sends the snapshot with fetch.
+                   The form is here so that the tag helper renders the antiforgery token the script reads. *@
                 <form>
+                    @* Camera -> Snap -> Upload. The script shows and hides these buttons and previews at each step. *@
                     <div class="d-flex flex-wrap gap-2 mb-3">
                         <button type="button" id="camera" class="btn btn-primary">Camera</button>
                         <button type="button" id="snap" class="btn btn-secondary" hidden="hidden">Snap</button>
@@ -53,6 +59,7 @@
 
 <h2 class="h4 mb-3">Images</h2>
 
+@* The current page of images, newest first. Only thumbnails are loaded here. *@
 <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3 mb-3">
     @foreach (var image in Model.Images) {
         <div class="col">
@@ -65,6 +72,7 @@
                 </a>
                 <div class="card-body p-2 d-flex flex-column">
                     <p class="card-text small text-truncate mb-2" title="@image.AlternativeText">@image.AlternativeText</p>
+                    @* POST, not a link, so that a crawler or a prefetch cannot delete images. The script asks for confirmation first. *@
                     <form method="post" asp-action="Delete" asp-route-id="@image.Id" asp-route-page="@Model.Page"
                           class="delete-form mt-auto" data-caption="@image.AlternativeText">
                         <button type="submit" class="btn btn-sm btn-outline-danger w-100">Delete</button>
@@ -75,6 +83,7 @@
     }
 </div>
 
+@* Page links, shown only when there is more than one page. *@
 @if (Model.TotalPages > 1) {
     <nav aria-label="Image pages">
         <ul class="pagination flex-wrap justify-content-center">
@@ -103,128 +112,5 @@
 </div>
 
 @section Scripts {
-    <script>
-    window.addEventListener('DOMContentLoaded', main)
-
-    let currentStream = null
-
-    function main() {
-        document.querySelector('#camera').addEventListener('click', startCamera)
-        document.querySelector('#snap').addEventListener('click', snap)
-        document.querySelector('#uploadPicture').addEventListener('click', upload)
-
-        const originalModal = document.querySelector('#originalModal')
-        originalModal.addEventListener('show.bs.modal', showOriginal)
-        originalModal.addEventListener('hidden.bs.modal', clearOriginal)
-
-        document.querySelectorAll('.delete-form').forEach(form => form.addEventListener('submit', confirmDelete))
-    }
-
-    function confirmDelete(e) {
-        if (!confirm(`Delete this image?\n${e.currentTarget.dataset.caption}`))
-            e.preventDefault()
-    }
-
-    function showOriginal(e) {
-        const link          = e.relatedTarget
-        const originalImage = document.querySelector('#originalImage')
-
-        // Sets the size first to keep the aspect ratio while loading.
-        originalImage.width  = link.dataset.width
-        originalImage.height = link.dataset.height
-        originalImage.alt    = link.dataset.caption
-        originalImage.src    = link.href
-        // textContent, not innerHTML: the description is user input.
-        document.querySelector('#originalModalLabel').textContent = link.dataset.caption
-    }
-
-    // Prevents the previous image from flashing when the modal is opened next time.
-    function clearOriginal() {
-        document.querySelector('#originalImage').removeAttribute('src')
-    }
-
-    function stopCamera() {
-        if (currentStream) {
-            currentStream.getTracks().forEach(track => track.stop())
-            currentStream = null
-        }
-    }
-
-    function startCamera(e) {
-        if (e.cancelable)
-            e.preventDefault()
-
-        stopCamera()
-
-        const video      = document.querySelector('#video')
-        const resolution = { width: 1080, height: 720 }
-
-        navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: {
-                width : { ideal: resolution.width  },
-                height: { ideal: resolution.height }
-            }
-        }).then(function (stream) {
-            currentStream   = stream
-            video.srcObject = stream
-        }).catch(function (error) {
-            console.error('mediaDevice.getUserMedia() error:', error)
-            alert('Could not start the camera.')
-        })
-
-        document.querySelector('#canvasPreview'   ).hidden = true
-        document.querySelector('#uploadPicture'   ).hidden = true
-        document.querySelector('#descriptionGroup').hidden = true
-        document.querySelector('#videoPreview'    ).hidden = false
-        document.querySelector('#snap'            ).hidden = false
-    }
-
-    function snap(e) {
-        if (e.cancelable)
-            e.preventDefault()
-
-        const canvas  = document.querySelector('#canvas')
-        const context = canvas.getContext('2d')
-        const video   = document.querySelector('#video')
-        context.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-        stopCamera()
-
-        document.querySelector('#videoPreview'    ).hidden = true
-        document.querySelector('#snap'            ).hidden = true
-        document.querySelector('#canvasPreview'   ).hidden = false
-        document.querySelector('#descriptionGroup').hidden = false
-        document.querySelector('#uploadPicture'   ).hidden = false
-    }
-
-    function upload(e) {
-        if (e.cancelable)
-            e.preventDefault()
-
-        const uploadButton = document.querySelector('#uploadPicture')
-        const canvas       = document.querySelector('#canvas')
-        const picture      = canvas.toDataURL('image/png')
-        const description  = document.querySelector('#description').value
-        const token        = document.querySelector('input[name="__RequestVerificationToken"]').value
-
-        uploadButton.disabled = true
-
-        $.ajax({
-            type: 'POST',
-            url: '@Url.Action("UploadCameraImage")',
-            headers: { RequestVerificationToken: token },
-            data: {
-                imageBase64: picture,
-                description: description
-            }
-        }).done(function () {
-            location.href = '@Url.Action("Upload")'
-        }).fail(function (xhr) {
-            alert('Upload failed: ' + (xhr.responseText || xhr.statusText))
-        }).always(function () {
-            uploadButton.disabled = false
-        })
-    }
-    </script>
+    <script src="~/js/upload.js"></script>
 }
