@@ -107,7 +107,7 @@ function snap(e) {
 }
 
 // Sends the snapshot on the canvas to POST UploadCameraImage, then reloads the list.
-function upload(e) {
+async function upload(e) {
     if (e.cancelable)
         e.preventDefault()
 
@@ -116,27 +116,33 @@ function upload(e) {
     // A data URL ("data:image/png;base64,..."), which the server decodes with ImageProcessor.ParseDataUrl.
     const picture      = canvas.toDataURL('image/png')
     const description  = document.querySelector('#description').value
-    // The hidden antiforgery field rendered by the forms above. Ajax sends it in a header instead of the body.
+    // The hidden antiforgery field rendered by the forms above. The request sends it in a header instead of the body.
     const token        = document.querySelector('input[name="__RequestVerificationToken"]').value
 
     // Prevents double uploads while the request is in flight.
     uploadButton.disabled = true
 
-    $.ajax({
-        type: 'POST',
-        url: '@Url.Action("UploadCameraImage")',
-        headers: { RequestVerificationToken: token },
-        data: {
-            imageBase64: picture,
-            description: description
+    try {
+        const response = await fetch('@Url.Action("UploadCameraImage")', {
+            method: 'POST',
+            headers: { RequestVerificationToken: token },
+            body: new URLSearchParams({
+                imageBase64: picture,
+                description: description
+            })
+        })
+
+        if (!response.ok) {
+            const message = await response.text()
+            alert('Upload failed: ' + (message || response.statusText || `HTTP ${response.status}`))
+            return
         }
-    }).done(function () {
+
         // Reloads the first page, where the new image appears.
         location.href = '@Url.Action("Upload")'
-    }).fail(function (xhr) {
-        // On 400 the response body is the error message from the server.
-        alert('Upload failed: ' + (xhr.responseText || xhr.statusText))
-    }).always(function () {
+    } catch (error) {
+        alert('Upload failed: ' + (error instanceof Error ? error.message : String(error)))
+    } finally {
         uploadButton.disabled = false
-    })
+    }
 }

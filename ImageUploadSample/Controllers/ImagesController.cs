@@ -72,7 +72,7 @@ public class ImagesController(ImageContext context) : Controller
     }
 
     /// <summary>
-    /// POST /Images/UploadCameraImage: saves a camera snapshot sent by Ajax from Upload.cshtml.
+    /// POST /Images/UploadCameraImage: saves a camera snapshot sent by fetch from Upload.cshtml.
     /// </summary>
     /// <param name="imageBase64">The snapshot as a data URL ("data:image/png;base64,...").</param>
     /// <returns>204 on success (the script then reloads the list); otherwise 400 with the error message.</returns>
