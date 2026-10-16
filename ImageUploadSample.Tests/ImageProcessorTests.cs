@@ -48,6 +48,23 @@ public class ImageProcessorTests
     }
 
     [Fact]
+    public void Process_RejectsTooManyPixels()
+    {
+        var exception = Assert.Throws<InvalidImageException>(
+            () => ImageProcessor.Process(TestImages.Create(4001, 4000)));
+        Assert.Equal("Too many image pixels.", exception.Message);
+    }
+
+    [Theory]
+    [InlineData(8000, 1, 800, 1)]
+    [InlineData(8000, 1000, 800, 100)]
+    public void GetThumbnailSize_BoundsDimensions(
+        int width, int height, int expectedWidth, int expectedHeight)
+        => Assert.Equal(
+            (expectedWidth, expectedHeight),
+            ImageProcessor.GetThumbnailSize(width, height));
+
+    [Fact]
     public void Process_RejectsTooLargeFile()
     {
         var exception = Assert.Throws<InvalidImageException>(

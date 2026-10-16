@@ -16,9 +16,11 @@ public record ProcessedImage(
 
 public static partial class ImageProcessor
 {
-    public const int MaximumFileSize  = 2 * 1024 * 1024; // 2 MB
-    public const int MaximumDimension = 8000;            // pixels (width and height each)
-    public const int ThumbnailSize    = 100;             // thumbnail height in pixels
+    public const int MaximumFileSize       = 2 * 1024 * 1024; // 2 MB
+    public const int MaximumDimension      = 8000;            // pixels (width and height each)
+    public const long MaximumPixelCount    = 4000 * 4000;   // 16 megapixels
+    public const int ThumbnailSize         = 100;             // thumbnail height in pixels
+    public const int MaximumThumbnailWidth = 800;        // thumbnail width in pixels
 
     static readonly Dictionary<SKEncodedImageFormat, string> supportedFormats = new() {
         [SKEncodedImageFormat.Png ] = "image/png" ,
@@ -48,6 +50,8 @@ public static partial class ImageProcessor
             throw new InvalidImageException("Invalid image.");
         if (width > MaximumDimension || height > MaximumDimension)
             throw new InvalidImageException("Too large image dimensions.");
+        if ((long)width * height > MaximumPixelCount)
+            throw new InvalidImageException("Too many image pixels.");
 
         var (thumbnailWidth, thumbnailHeight) = GetThumbnailSize(width, height);
         var thumbnailData = codec.CreateThumbnail(thumbnailWidth, thumbnailHeight);
@@ -55,7 +59,14 @@ public static partial class ImageProcessor
     }
 
     public static (int width, int height) GetThumbnailSize(int width, int height)
-        => (Math.Max(1, (int)Math.Round((double)ThumbnailSize * width / height)), ThumbnailSize);
+    {
+        var scale = Math.Min(
+            (double)ThumbnailSize / height,
+            (double)MaximumThumbnailWidth / width);
+        return (
+            Math.Clamp((int)Math.Round(width * scale), 1, MaximumThumbnailWidth),
+            Math.Clamp((int)Math.Round(height * scale), 1, ThumbnailSize));
+    }
 
     extension(SKCodec codec)
     {

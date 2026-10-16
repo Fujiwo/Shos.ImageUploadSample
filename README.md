@@ -10,8 +10,8 @@ It is small enough to read in one sitting, yet covers the things a real image up
 
 | Topic | What this sample does |
 |---|---|
-| **Safe image validation** | Reads only the image header first and rejects files over 2 MB or 8000 px before decoding them (protection against decompression bombs). The MIME type is detected from the content, not taken from the client. |
-| **Efficient processing** | Each upload is decoded only once, to create a 100 px high PNG thumbnail with SkiaSharp. |
+| **Safe image validation** | Reads only the image header first and rejects files over 2 MB, over 8000 px in either dimension, or over 16 megapixels before decoding them (protection against decompression bombs). The MIME type is detected from the content, not taken from the client. |
+| **Efficient processing** | Each upload is decoded only once, to create an aspect-ratio-preserving PNG thumbnail bounded to 800 × 100 px with SkiaSharp. |
 | **Light list page** | The list query projects to `ImageSummary` without the image blobs. The page loads only thumbnails; an original is fetched when its thumbnail is clicked and shown in a modal. |
 | **Efficient delete** | `ExecuteDeleteAsync` deletes the row (thumbnail and original together) without loading the blobs, after a confirmation dialog. |
 | **CSRF protection** | Antiforgery validation is applied globally. The camera upload sends the token in a request header from `$.ajax`. |
@@ -60,7 +60,9 @@ classDiagram
         <<static>>
         +int MaximumFileSize$
         +int MaximumDimension$
+        +long MaximumPixelCount$
         +int ThumbnailSize$
+        +int MaximumThumbnailWidth$
         +Process(byte[] imageData) ProcessedImage$
         +GetThumbnailSize(int width, int height) ValueTuple~int,int~$
         +ParseDataUrl(string dataUrl) byte[]$
@@ -313,6 +315,8 @@ The integration tests use `WebApplicationFactory` and replace SQL Server with in
 
 - Maximum file size: 2 MB (both file and camera uploads)
 - Maximum image dimensions: 8000 px for both width and height
+- Maximum total image pixels: 16 megapixels
+- Maximum thumbnail dimensions: 800 × 100 px
 - Supported formats: PNG, JPEG, GIF, BMP, WebP (detected from the content)
 - Description: up to 200 characters
 - Camera: requires HTTPS (or localhost) and a browser with WebRTC support

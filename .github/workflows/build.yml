@@ -16,4 +16,12 @@ jobs:
       - run: dotnet restore
       - run: dotnet build --no-restore --configuration Release
       - run: dotnet test --no-build --configuration Release
-      - run: dotnet list package --vulnerable --include-transitive
+      - name: Check for vulnerable packages
+        shell: bash
+        run: |
+          report="$(dotnet list package --vulnerable --include-transitive)"
+          printf '%s\n' "$report"
+          if grep -Eiq '(^|[[:space:]])(critical|high|moderate|low)([[:space:]]|$)' <<< "$report"; then
+            echo "::error::Vulnerable NuGet packages were found."
+            exit 1
+          fi
