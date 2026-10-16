@@ -295,7 +295,9 @@ ImageUploadSample/
 │   ├── Images/
 │   │   ├── Upload.cshtml       # Upload forms, image list, modal, camera script
 │   │   └── Upload.cshtml.css   # Scoped CSS for the list
-│   └── Shared/                 # Layout and error page
+│   └── Shared/
+│       ├── _Layout.cshtml      # Shared layout
+│       └── _Layout.cshtml.css  # Scoped CSS for the layout
 ├── Migrations/                 # EF Core migrations
 ├── appsettings.json            # Settings (connection string)
 └── Program.cs                  # Entry point
@@ -307,6 +309,8 @@ CLAUDE.md                       # Guidance for Claude Code
 Reviews/                        # Code review records
 docs/                           # Design notes
 ```
+
+Razor CSS isolation files (`*.cshtml.css`) are combined at build time into `ImageUploadSample.styles.css`. The shared layout links this bundle, so the styles do not need to be linked individually.
 
 ## Tests
 

@@ -295,7 +295,9 @@ ImageUploadSample/
 │   ├── Images/
 │   │   ├── Upload.cshtml       # アップロードフォーム、画像一覧、モーダル、カメラのスクリプト
 │   │   └── Upload.cshtml.css   # 一覧用のスコープ付き CSS
-│   └── Shared/                 # レイアウトとエラーページ
+│   └── Shared/
+│       ├── _Layout.cshtml      # 共通レイアウト
+│       └── _Layout.cshtml.css  # レイアウト用のスコープ付き CSS
 ├── Migrations/                 # EF Core マイグレーション
 ├── appsettings.json            # 設定 (接続文字列)
 └── Program.cs                  # エントリポイント
@@ -307,6 +309,8 @@ CLAUDE.md                       # Claude Code 向けの指示
 Reviews/                        # コードレビューの記録
 docs/                           # 設計メモ
 ```
+
+Razor の CSS 分離ファイル (`*.cshtml.css`) は、ビルド時に `ImageUploadSample.styles.css` にまとめられます。このバンドルは共通レイアウトから読み込むため、個別にリンクする必要はありません。
 
 ## テスト
 
