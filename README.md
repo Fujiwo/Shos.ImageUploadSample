@@ -4,7 +4,7 @@
 
 A sample ASP.NET Core 10.0 MVC application that uploads images, from a file or from the browser camera, and stores them, along with generated thumbnails, in SQL Server through Entity Framework Core 10.
 
-It is small enough to read in one sitting, yet covers the things a real image upload needs: validating untrusted images safely, keeping the list page light, CSRF protection for both forms and Ajax, and tests that run on any OS.
+It is small enough to read in one sitting, yet covers the things a real image upload needs: validating untrusted images safely, keeping the list page light, CSRF protection for both forms and the camera's `fetch` request, and tests that run on any OS.
 
 ## Highlights
 
@@ -14,7 +14,7 @@ It is small enough to read in one sitting, yet covers the things a real image up
 | **Efficient processing** | Each upload is decoded only once, to create an aspect-ratio-preserving PNG thumbnail bounded to 800 × 100 px with SkiaSharp. |
 | **Light list page** | The list query projects to `ImageSummary` without the image blobs. The page loads only thumbnails; an original is fetched when its thumbnail is clicked and shown in a modal. |
 | **Efficient delete** | `ExecuteDeleteAsync` deletes the row (thumbnail and original together) without loading the blobs, after a confirmation dialog. |
-| **CSRF protection** | Antiforgery validation is applied globally. The camera upload sends the token in a request header from `$.ajax`. |
+| **CSRF protection** | Antiforgery validation is applied globally. The camera upload sends the token in a request header from `fetch`. |
 | **Responsive UI** | Bootstrap 5 cards and a grid of 2 to 6 columns depending on the screen width. The modal goes full screen on phones. |
 | **Cross-platform tests** | Integration tests replace SQL Server with in-memory SQLite, so `dotnet test` runs on Windows, Linux and macOS (and in GitHub Actions on Ubuntu). |
 | **Modern C#** | C# 14 extension members (`extension(SKCodec codec) { ... }`), primary constructors, records, collection expressions and generated regular expressions. |
@@ -184,6 +184,8 @@ sequenceDiagram
         Controller-->>Browser: 302 to the list (file) / 204 No Content (camera)
     end
 ```
+
+Both upload endpoints use the same image processing and save path after receiving the image. The file form sends `multipart/form-data`; the camera code sends the canvas image and description as URL-encoded form data with `fetch`, and puts the antiforgery token in a request header. The controller passes the image bytes to `ImageProcessor`, then stores the original and generated thumbnail together in one `ImageRecord`. After a successful save, the file upload redirects to the list; the camera endpoint returns `204`, and the browser reloads the list.
 
 ### Endpoints
 
