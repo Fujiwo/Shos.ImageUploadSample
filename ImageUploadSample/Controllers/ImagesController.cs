@@ -90,7 +90,7 @@ public class ImagesController(ImageContext context) : Controller
     [IgnoreAntiforgeryToken]
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
-        => View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        => View(new ErrorViewModel(Activity.Current?.Id ?? HttpContext.TraceIdentifier));
 
     // Returns an error message, or null on success.
     async Task<string?> Save(byte[] imageData, string? description)

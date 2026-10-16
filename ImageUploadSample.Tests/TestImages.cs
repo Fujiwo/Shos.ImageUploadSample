@@ -13,6 +13,9 @@ static class TestImages
         return data.ToArray();
     }
 
-    public static string ToDataUrl(byte[] data, string mimeType = "image/png")
-        => $"data:{mimeType};base64,{Convert.ToBase64String(data)}";
+    extension(byte[] data)
+    {
+        public string ToDataUrl(string mimeType = "image/png")
+            => $"data:{mimeType};base64,{Convert.ToBase64String(data)}";
+    }
 }

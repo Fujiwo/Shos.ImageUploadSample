@@ -44,10 +44,10 @@ public partial class ImagesControllerTests : IDisposable
     async Task<HttpResponseMessage> PostCameraImageAsync(string imageBase64, string description = "")
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/Images/UploadCameraImage") {
-            Content = new FormUrlEncodedContent(new Dictionary<string, string> {
-                ["imageBase64"] = imageBase64,
-                ["description"] = description
-            })
+            Content = new FormUrlEncodedContent([
+                new("imageBase64", imageBase64),
+                new("description", description)
+            ])
         };
         request.Headers.Add("RequestVerificationToken", await GetAntiforgeryTokenAsync());
         return await client.SendAsync(request);
@@ -111,7 +111,7 @@ public partial class ImagesControllerTests : IDisposable
     [Fact]
     public async Task UploadCameraImage_SavesDescription()
     {
-        var response = await PostCameraImageAsync(TestImages.ToDataUrl(TestImages.Create(60, 40)), "camera description");
+        var response = await PostCameraImageAsync(TestImages.Create(60, 40).ToDataUrl(), "camera description");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         var image = Assert.Single(factory.GetImages());

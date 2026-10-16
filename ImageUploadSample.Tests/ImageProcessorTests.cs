@@ -58,8 +58,8 @@ public class ImageProcessorTests
     [Fact]
     public void ParseDataUrl_DecodesValidDataUrl()
     {
-        var data = new byte[] { 1, 2, 3, 4, 5 };
-        Assert.Equal(data, ImageProcessor.ParseDataUrl(TestImages.ToDataUrl(data)));
+        byte[] data = [1, 2, 3, 4, 5];
+        Assert.Equal(data, ImageProcessor.ParseDataUrl(data.ToDataUrl()));
     }
 
     [Theory]
