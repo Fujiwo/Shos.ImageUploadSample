@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-ASP.NET Core 10.0 MVC sample app (solution `Shos.ImageUploadSample.sln`: app `ImageUploadSample/`, tests `ImageUploadSample.Tests/`) that uploads images, from a file or from the browser camera, and stores them, along with generated thumbnails, in SQL Server (LocalDB) via EF Core 10. `README.md` is in English and `README.jp.md` is its Japanese counterpart; keep the two in sync. Commit messages are in Japanese.
+ASP.NET Core 10.0 MVC sample app (solution `Shos.ImageUploadSample.sln`: app `ImageUploadSample/`, tests `ImageUploadSample.Tests/`) that uploads images, from a file or from the browser camera, and stores them, along with generated thumbnails, in SQL Server (LocalDB) via EF Core 10. `README.md` is in English and `README.jp.md` is its Japanese counterpart; keep the two in sync. `CLAUDE.md` and `.github/copilot-instructions.md` hold the same guidance; keep them in sync too. Commit messages are in Japanese.
 
 ## Commands
 
@@ -16,7 +16,7 @@ dotnet ef database update        # from ImageUploadSample/ (requires: dotnet too
 dotnet ef migrations add <Name>  # after changing the ImageRecord entity
 ```
 
-CI (`.github/workflows/build.yml`) runs restore, build, test, and a vulnerable-package check on `ubuntu-latest`. There is no lint configuration.
+CI (`.github/workflows/build.yml`) runs restore, build, test, and a vulnerable-package check (which fails the job when any vulnerability is reported) on `ubuntu-latest`. There is no lint configuration.
 
 ## Platform notes
 
@@ -29,7 +29,7 @@ CI (`.github/workflows/build.yml`) runs restore, build, test, and a vulnerable-p
 ## Architecture
 
 - The default route is `{controller=Images}/{action=Upload}/{id?}`. `ImagesController` is the only controller and also hosts `Error` (the non-Development exception handler is `/Images/Error`).
-- `Services/ImageProcessor.cs` holds all image logic: header-only dimension check (max 8000px, max 2 MB), format detection (the MIME type comes from the content, not from the client), single decode for the 100px-high PNG thumbnail, and strict `data:image/...;base64,` parsing. Failures throw `InvalidImageException`, which the controller turns into 400.
+- `Services/ImageProcessor.cs` holds all image logic: header-only dimension check (max 2 MB, max 8000px per side, max 16 megapixels in total), format detection (the MIME type comes from the content, not from the client), single decode for the aspect-ratio-preserving PNG thumbnail (bounded to 800 × 100 px), and strict `data:image/...;base64,` parsing. Failures throw `InvalidImageException`, which the controller turns into 400.
 - `ImagesController` upload paths both go through `Save`:
   - `POST Upload(IFormFile file, string description)`: a multipart form, redirects to the list.
   - `POST UploadCameraImage(string imageBase64, string description)`: called by jQuery `$.ajax` from inline JS in `Views/Images/Upload.cshtml`, and returns 204.
