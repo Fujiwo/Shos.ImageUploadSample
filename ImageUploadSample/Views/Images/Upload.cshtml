@@ -5,14 +5,17 @@
 
 <h1 class="h2 mb-3">@ViewData["Title"]</h1>
 
+@* Upload forms: from a file (left) and from the camera (right). They sit side by side on large screens. *@
 <div class="row g-3 mb-4">
     <div class="col-12 col-lg-6">
         <div class="card h-100">
             <div class="card-header">File</div>
             <div class="card-body">
+                @* A normal form post to POST Upload. The form tag helper adds the antiforgery token. *@
                 <form method="post" enctype="multipart/form-data">
                     <div class="mb-3">
                         <label for="file" class="form-label">Choose Image</label>
+                        @* accept only filters the file dialog; the server detects the real format from the content. *@
                         <input type="file" id="file" name="file" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" class="form-control">
                     </div>
                     <div class="mb-3">
@@ -28,7 +31,10 @@
         <div class="card h-100">
             <div class="card-header">Camera</div>
             <div class="card-body">
+                @* Not submitted: the script below sends the snapshot by Ajax.
+                   The form is here so that the tag helper renders the antiforgery token the script reads. *@
                 <form>
+                    @* Camera -> Snap -> Upload. The script shows and hides these buttons and previews at each step. *@
                     <div class="d-flex flex-wrap gap-2 mb-3">
                         <button type="button" id="camera" class="btn btn-primary">Camera</button>
                         <button type="button" id="snap" class="btn btn-secondary" hidden="hidden">Snap</button>
@@ -53,6 +59,7 @@
 
 <h2 class="h4 mb-3">Images</h2>
 
+@* The current page of images, newest first. Only thumbnails are loaded here. *@
 <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3 mb-3">
     @foreach (var image in Model.Images) {
         <div class="col">
@@ -65,6 +72,7 @@
                 </a>
                 <div class="card-body p-2 d-flex flex-column">
                     <p class="card-text small text-truncate mb-2" title="@image.AlternativeText">@image.AlternativeText</p>
+                    @* POST, not a link, so that a crawler or a prefetch cannot delete images. The script asks for confirmation first. *@
                     <form method="post" asp-action="Delete" asp-route-id="@image.Id" asp-route-page="@Model.Page"
                           class="delete-form mt-auto" data-caption="@image.AlternativeText">
                         <button type="submit" class="btn btn-sm btn-outline-danger w-100">Delete</button>
@@ -75,6 +83,7 @@
     }
 </div>
 
+@* Page links, shown only when there is more than one page. *@
 @if (Model.TotalPages > 1) {
     <nav aria-label="Image pages">
         <ul class="pagination flex-wrap justify-content-center">
@@ -106,13 +115,16 @@
     <script>
     window.addEventListener('DOMContentLoaded', main)
 
+    // The MediaStream from the camera while it is running; null otherwise.
     let currentStream = null
 
+    // Wires up the event handlers once the page has loaded.
     function main() {
         document.querySelector('#camera').addEventListener('click', startCamera)
         document.querySelector('#snap').addEventListener('click', snap)
         document.querySelector('#uploadPicture').addEventListener('click', upload)
 
+        // Bootstrap raises these events when the modal for the original image opens and closes.
         const originalModal = document.querySelector('#originalModal')
         originalModal.addEventListener('show.bs.modal', showOriginal)
         originalModal.addEventListener('hidden.bs.modal', clearOriginal)
@@ -120,12 +132,15 @@
         document.querySelectorAll('.delete-form').forEach(form => form.addEventListener('submit', confirmDelete))
     }
 
+    // Cancels the delete form submission unless the user confirms it.
     function confirmDelete(e) {
         if (!confirm(`Delete this image?\n${e.currentTarget.dataset.caption}`))
             e.preventDefault()
     }
 
+    // Shows the original image of the clicked thumbnail in the modal.
     function showOriginal(e) {
+        // The thumbnail link that opened the modal. Its data-* attributes and href describe the image.
         const link          = e.relatedTarget
         const originalImage = document.querySelector('#originalImage')
 
@@ -143,6 +158,7 @@
         document.querySelector('#originalImage').removeAttribute('src')
     }
 
+    // Stops all the tracks so that the camera is released (and its indicator light turns off).
     function stopCamera() {
         if (currentStream) {
             currentStream.getTracks().forEach(track => track.stop())
@@ -150,13 +166,16 @@
         }
     }
 
+    // Starts the camera and shows its live preview. Pressing the button again after a snap retakes the picture.
     function startCamera(e) {
         if (e.cancelable)
             e.preventDefault()
 
+        // Releases the previous stream, if any, before asking for a new one.
         stopCamera()
 
         const video      = document.querySelector('#video')
+        // Only a preference ("ideal"); the browser picks the closest resolution the camera supports.
         const resolution = { width: 1080, height: 720 }
 
         navigator.mediaDevices.getUserMedia({
@@ -173,6 +192,7 @@
             alert('Could not start the camera.')
         })
 
+        // Switches the UI to the live preview while the browser asks for permission.
         document.querySelector('#canvasPreview'   ).hidden = true
         document.querySelector('#uploadPicture'   ).hidden = true
         document.querySelector('#descriptionGroup').hidden = true
@@ -180,6 +200,7 @@
         document.querySelector('#snap'            ).hidden = false
     }
 
+    // Copies the current video frame to the canvas and stops the camera.
     function snap(e) {
         if (e.cancelable)
             e.preventDefault()
@@ -187,10 +208,12 @@
         const canvas  = document.querySelector('#canvas')
         const context = canvas.getContext('2d')
         const video   = document.querySelector('#video')
+        // Scales the frame to the canvas size (600x400), whatever the camera resolution is.
         context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
         stopCamera()
 
+        // Switches the UI to the snapshot, ready to upload.
         document.querySelector('#videoPreview'    ).hidden = true
         document.querySelector('#snap'            ).hidden = true
         document.querySelector('#canvasPreview'   ).hidden = false
@@ -198,16 +221,20 @@
         document.querySelector('#uploadPicture'   ).hidden = false
     }
 
+    // Sends the snapshot on the canvas to POST UploadCameraImage, then reloads the list.
     function upload(e) {
         if (e.cancelable)
             e.preventDefault()
 
         const uploadButton = document.querySelector('#uploadPicture')
         const canvas       = document.querySelector('#canvas')
+        // A data URL ("data:image/png;base64,..."), which the server decodes with ImageProcessor.ParseDataUrl.
         const picture      = canvas.toDataURL('image/png')
         const description  = document.querySelector('#description').value
+        // The hidden antiforgery field rendered by the forms above. Ajax sends it in a header instead of the body.
         const token        = document.querySelector('input[name="__RequestVerificationToken"]').value
 
+        // Prevents double uploads while the request is in flight.
         uploadButton.disabled = true
 
         $.ajax({
@@ -219,8 +246,10 @@
                 description: description
             }
         }).done(function () {
+            // Reloads the first page, where the new image appears.
             location.href = '@Url.Action("Upload")'
         }).fail(function (xhr) {
+            // On 400 the response body is the error message from the server.
             alert('Upload failed: ' + (xhr.responseText || xhr.statusText))
         }).always(function () {
             uploadButton.disabled = false

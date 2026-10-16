@@ -3,8 +3,11 @@ using SkiaSharp;
 
 namespace ImageUploadSample.Tests;
 
+// Unit tests of ImageProcessor. They need no web host or database.
 public class ImageProcessorTests
 {
+    // Arguments: the original width and height, then the expected thumbnail width and height.
+    // Every thumbnail is 100 px high; small images are scaled up and thin ones are at least 1 px wide.
     [Theory]
     [InlineData(400, 200, 200, 100)]
     [InlineData(200, 400,  50, 100)]
@@ -47,6 +50,7 @@ public class ImageProcessorTests
         Assert.Equal("Too large image dimensions.", exception.Message);
     }
 
+    // 4001 x 4000 is within the per-side limit but just over 16 megapixels.
     [Fact]
     public void Process_RejectsTooManyPixels()
     {
@@ -55,6 +59,7 @@ public class ImageProcessorTests
         Assert.Equal("Too many image pixels.", exception.Message);
     }
 
+    // Very wide images are limited by the maximum thumbnail width (800 px) instead of the height.
     [Theory]
     [InlineData(8000, 1, 800, 1)]
     [InlineData(8000, 1000, 800, 100)]
@@ -79,6 +84,7 @@ public class ImageProcessorTests
         Assert.Equal(data, ImageProcessor.ParseDataUrl(data.ToDataUrl()));
     }
 
+    // Missing data, a missing ";base64", a non-image type, invalid Base64, and prefixes that are not at the start.
     [Theory]
     [InlineData(null)]
     [InlineData("")]

@@ -6,11 +6,14 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace ImageUploadSample.Tests;
 
+// Integration tests that send real HTTP requests to the app, backed by in-memory SQLite.
+// xUnit creates a new instance for each test, so every test starts with an empty database.
 public partial class ImagesControllerTests : IDisposable
 {
     readonly TestApplicationFactory factory = new();
     readonly HttpClient client;
 
+    // Redirects are not followed, so that the tests can assert the 302 responses themselves.
     public ImagesControllerTests()
         => client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
@@ -20,15 +23,19 @@ public partial class ImagesControllerTests : IDisposable
         factory.Dispose();
     }
 
+    // Extracts the value of the hidden antiforgery field that the form tag helper renders.
     [GeneratedRegex(@"name=""__RequestVerificationToken"" type=""hidden"" value=""([^""]+)""")]
     private static partial Regex AntiforgeryTokenPattern();
 
+    // Loads the upload page to get a valid antiforgery token.
+    // The client keeps the matching antiforgery cookie, which the server checks together with the token.
     async Task<string> GetAntiforgeryTokenAsync()
     {
         var html = await client.GetStringAsync("/");
         return AntiforgeryTokenPattern().Match(html).Groups[1].Value;
     }
 
+    // Posts the file form as the browser does (multipart/form-data, token in a form field).
     async Task<HttpResponseMessage> PostFileAsync(byte[] fileData, string description = "", bool withToken = true)
     {
         using var content = new MultipartFormDataContent();
@@ -41,6 +48,7 @@ public partial class ImagesControllerTests : IDisposable
         return await client.PostAsync("/Images/Upload", content);
     }
 
+    // Posts a camera snapshot as the page script does (form URL encoded, token in the RequestVerificationToken header).
     async Task<HttpResponseMessage> PostCameraImageAsync(string imageBase64, string description = "")
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/Images/UploadCameraImage") {
@@ -102,6 +110,7 @@ public partial class ImagesControllerTests : IDisposable
     [Fact]
     public async Task Upload_TooLongDescription_ReturnsBadRequest()
     {
+        // One character over ImageRecord.DescriptionMaxLength (200).
         var response = await PostFileAsync(TestImages.Create(10, 10), new string('a', 201));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -121,7 +130,7 @@ public partial class ImagesControllerTests : IDisposable
 
     [Theory]
     [InlineData("data:image/png;base64,***")]
-    [InlineData("data:image/png;base64,AQID")]
+    [InlineData("data:image/png;base64,AQID")] // valid data URL, but the bytes are not an image
     [InlineData("garbage")]
     public async Task UploadCameraImage_InvalidData_ReturnsBadRequest(string imageBase64)
     {
@@ -153,11 +162,13 @@ public partial class ImagesControllerTests : IDisposable
 
         var html = await client.GetStringAsync("/");
 
+        // The list must not load the originals; they are only linked to.
         Assert.Contains($"src=\"/Images/Thumbnail/{id}\"", html);
         Assert.Contains($"href=\"/Images/Original/{id}\"", html);
         Assert.DoesNotContain($"src=\"/Images/Original/{id}\"", html);
     }
 
+    // Posts the delete form of an image, optionally without the antiforgery token.
     async Task<HttpResponseMessage> PostDeleteAsync(int id, bool withToken = true)
     {
         var fields = new Dictionary<string, string>();

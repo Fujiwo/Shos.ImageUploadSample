@@ -1,3 +1,4 @@
+/* Smaller base font on narrow (mobile) screens. */
 html {
   font-size: 14px;
 }
@@ -8,10 +9,12 @@ html {
   }
 }
 
+/* A visible focus ring for keyboard users. */
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
   box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
+/* Leaves room at the bottom of the page for the footer. */
 html {
   position: relative;
   min-height: 100%;
