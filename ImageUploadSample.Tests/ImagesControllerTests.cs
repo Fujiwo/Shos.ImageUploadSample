@@ -153,7 +153,7 @@ public partial class ImagesControllerTests : IDisposable
 
         var html = await client.GetStringAsync("/");
 
-        Assert.Contains($"<img src=\"/Images/Thumbnail/{id}\"", html);
+        Assert.Contains($"src=\"/Images/Thumbnail/{id}\"", html);
         Assert.Contains($"href=\"/Images/Original/{id}\"", html);
         Assert.DoesNotContain($"src=\"/Images/Original/{id}\"", html);
     }

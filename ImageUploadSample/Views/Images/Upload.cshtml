@@ -3,46 +3,96 @@
     ViewData["Title"] = "Upload Image";
 }
 
-<h2>@ViewData["Title"]</h2>
+<h1 class="h2 mb-3">@ViewData["Title"]</h1>
 
-<div>
-    <hr>
-    <div class="row">
-        @foreach (var image in Model.Images) {
-            <div class="col-auto">
-                @* Without JavaScript, the link opens the original image directly. *@
-                <a href="@Url.Action("Original", new { id = image.Id })" target="_blank"
-                   data-bs-toggle="modal" data-bs-target="#originalModal"
-                   data-caption="@image.AlternativeText" data-width="@image.Width" data-height="@image.Height">
-                    <img src="@Url.Action("Thumbnail", new { id = image.Id })" width="@(image.ThumbnailWidth)" height="@(image.ThumbnailHeight)" alt="@image.AlternativeText" class="img-thumbnail" />
-                </a>
-                <form method="post" asp-action="Delete" asp-route-id="@image.Id" asp-route-page="@Model.Page"
-                      class="delete-form mt-1" data-caption="@image.AlternativeText">
-                    <button type="submit" class="btn btn-sm btn-outline-danger w-100">Delete</button>
+<div class="row g-3 mb-4">
+    <div class="col-12 col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">File</div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Choose Image</label>
+                        <input type="file" id="file" name="file" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label for="fileDescription" class="form-label">Description</label>
+                        <input type="text" id="fileDescription" name="description" maxlength="@ImageRecord.DescriptionMaxLength" placeholder="Description (optional)" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Upload</button>
                 </form>
             </div>
-        }
+        </div>
     </div>
-    @if (Model.TotalPages > 1) {
-        <nav aria-label="Image pages">
-            <ul class="pagination">
-                @for (var pageNumber = 1; pageNumber <= Model.TotalPages; pageNumber++) {
-                    <li class="page-item @(pageNumber == Model.Page ? "active" : "")">
-                        <a class="page-link" asp-action="Upload" asp-route-page="@pageNumber">@pageNumber</a>
-                    </li>
-                }
-            </ul>
-        </nav>
-    }
-    <hr>
+    <div class="col-12 col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">Camera</div>
+            <div class="card-body">
+                <form>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <button type="button" id="camera" class="btn btn-primary">Camera</button>
+                        <button type="button" id="snap" class="btn btn-secondary" hidden="hidden">Snap</button>
+                        <button type="button" id="uploadPicture" class="btn btn-success" hidden="hidden">Upload</button>
+                    </div>
+                    @* The canvas keeps 600x400 pixels; CSS only scales how they are displayed. *@
+                    <div id="videoPreview" class="mb-3" hidden="hidden">
+                        <video id="video" width="600" height="400" autoplay="autoplay" playsinline muted class="w-100 h-auto border rounded"></video>
+                    </div>
+                    <div id="canvasPreview" class="mb-3" hidden="hidden">
+                        <canvas id="canvas" width="600" height="400" class="w-100 h-auto border rounded"></canvas>
+                    </div>
+                    <div id="descriptionGroup" hidden="hidden">
+                        <label for="description" class="form-label">Description</label>
+                        <input type="text" id="description" maxlength="@ImageRecord.DescriptionMaxLength" placeholder="Description (optional)" class="form-control">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
+
+<h2 class="h4 mb-3">Images</h2>
+
+<div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3 mb-3">
+    @foreach (var image in Model.Images) {
+        <div class="col">
+            <div class="card h-100">
+                @* Without JavaScript, the link opens the original image directly. *@
+                <a href="@Url.Action("Original", new { id = image.Id })" target="_blank" class="ratio ratio-4x3 bg-light rounded-top"
+                   data-bs-toggle="modal" data-bs-target="#originalModal"
+                   data-caption="@image.AlternativeText" data-width="@image.Width" data-height="@image.Height">
+                    <img src="@Url.Action("Thumbnail", new { id = image.Id })" width="@(image.ThumbnailWidth)" height="@(image.ThumbnailHeight)" alt="@image.AlternativeText" class="thumbnail-image p-1" />
+                </a>
+                <div class="card-body p-2 d-flex flex-column">
+                    <p class="card-text small text-truncate mb-2" title="@image.AlternativeText">@image.AlternativeText</p>
+                    <form method="post" asp-action="Delete" asp-route-id="@image.Id" asp-route-page="@Model.Page"
+                          class="delete-form mt-auto" data-caption="@image.AlternativeText">
+                        <button type="submit" class="btn btn-sm btn-outline-danger w-100">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (Model.TotalPages > 1) {
+    <nav aria-label="Image pages">
+        <ul class="pagination flex-wrap justify-content-center">
+            @for (var pageNumber = 1; pageNumber <= Model.TotalPages; pageNumber++) {
+                <li class="page-item @(pageNumber == Model.Page ? "active" : "")">
+                    <a class="page-link" asp-action="Upload" asp-route-page="@pageNumber">@pageNumber</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}
 
 @* Shared by all thumbnails. The original image is loaded only when the modal is opened. *@
 <div class="modal fade" id="originalModal" tabindex="-1" aria-labelledby="originalModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-md-down">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="originalModalLabel"></h5>
+                <h5 class="modal-title text-break" id="originalModalLabel"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
@@ -51,36 +101,6 @@
         </div>
     </div>
 </div>
-
-<form method="post" enctype="multipart/form-data">
-    <div class="form-group">
-        <label for="file" class="form-label">Choose Image</label>
-        <input type="file" id="file" name="file" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" class="form-control">
-        <label for="fileDescription" class="form-label">Description</label>
-        <input type="text" id="fileDescription" name="description" maxlength="@ImageRecord.DescriptionMaxLength" placeholder="Description (optional)" class="form-control">
-    </div>
-    <button type="submit" class="btn btn-primary">Upload</button>
-</form>
-
-<form>
-    <div class="form-group">
-        <div class="form-control">
-            <button type="button" id="camera" class="btn btn-primary">Camera</button>
-            <button type="button" id="snap" class="btn btn-secondary" hidden="hidden">Snap</button>
-            <button type="button" id="uploadPicture" class="btn btn-success" hidden="hidden">Upload</button>
-        </div>
-        <div id="videoPreview" class="form-control" hidden="hidden">
-            <video id="video" width="600" height="400" autoplay="autoplay"></video>
-        </div>
-        <div id="canvasPreview" class="form-control" hidden="hidden">
-            <canvas id="canvas" width="600" height="400"></canvas>
-        </div>
-        <div id="descriptionGroup" hidden="hidden">
-            <label for="description" class="form-label">Description</label>
-            <input type="text" id="description" maxlength="@ImageRecord.DescriptionMaxLength" placeholder="Description (optional)" class="form-control">
-        </div>
-    </div>
-</form>
 
 @section Scripts {
     <script>
