@@ -34,6 +34,6 @@ CI (`.github/workflows/build.yml`) runs restore, build, test, and a vulnerable-p
   - `POST Upload(IFormFile file, string description)`: a multipart form, redirects to the list.
   - `POST UploadCameraImage(string imageBase64, string description)`: called by jQuery `$.ajax` from inline JS in `Views/Images/Upload.cshtml`, and returns 204.
 - Antiforgery validation is global (`AutoValidateAntiforgeryTokenAttribute`). The camera Ajax call sends the token in the `RequestVerificationToken` header.
-- The list (`GET Upload?page=n`) projects to `ImageSummary` (no blobs) with 24 items per page. Images are served by `GET Images/Thumbnail/{id}` and `GET Images/Original/{id}`.
+- The list (`GET Upload?page=n`) projects to `ImageSummary` (no blobs) with 24 items per page. Images are served by `GET Images/Thumbnail/{id}` and `GET Images/Original/{id}`. `POST Images/Delete/{id}?page=n` deletes the row (thumbnail and original together) with `ExecuteDeleteAsync`; the list asks for confirmation in JS first.
 - `Models/ImageContext.cs` holds the `ImageRecord` entity (table `Images`) and `ImageContext`, which takes options only. The connection string comes solely from `ConnectionStrings:ImageContext`, and `dotnet ef` picks it up through `Program.cs`.
 - Integration tests (`TestApplicationFactory`) swap the SQL Server registration for in-memory SQLite by removing `DbContextOptions<ImageContext>` and `IDbContextOptionsConfiguration<ImageContext>`.

@@ -65,6 +65,15 @@ public class ImagesController(ImageContext context) : Controller
         return error is null ? NoContent() : BadRequest(error);
     }
 
+    // The thumbnail and the original are in the same row, so this deletes both.
+    // ExecuteDeleteAsync deletes without loading the blobs.
+    [HttpPost]
+    public async Task<IActionResult> Delete(int id, int page = 1)
+    {
+        var deletedCount = await context.Images.Where(image => image.Id == id).ExecuteDeleteAsync();
+        return deletedCount == 0 ? NotFound() : RedirectToAction(nameof(Upload), new { page });
+    }
+
     [HttpGet]
     [ResponseCache(Duration = 24 * 60 * 60)]
     public async Task<IActionResult> Thumbnail(int id)
@@ -90,7 +99,7 @@ public class ImagesController(ImageContext context) : Controller
     [IgnoreAntiforgeryToken]
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
-        => View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        => View(new ErrorViewModel(Activity.Current?.Id ?? HttpContext.TraceIdentifier));
 
     // Returns an error message, or null on success.
     async Task<string?> Save(byte[] imageData, string? description)

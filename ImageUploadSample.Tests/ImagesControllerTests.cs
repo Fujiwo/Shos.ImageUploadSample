@@ -44,10 +44,10 @@ public partial class ImagesControllerTests : IDisposable
     async Task<HttpResponseMessage> PostCameraImageAsync(string imageBase64, string description = "")
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/Images/UploadCameraImage") {
-            Content = new FormUrlEncodedContent(new Dictionary<string, string> {
-                ["imageBase64"] = imageBase64,
-                ["description"] = description
-            })
+            Content = new FormUrlEncodedContent([
+                new("imageBase64", imageBase64),
+                new("description", description)
+            ])
         };
         request.Headers.Add("RequestVerificationToken", await GetAntiforgeryTokenAsync());
         return await client.SendAsync(request);
@@ -111,7 +111,7 @@ public partial class ImagesControllerTests : IDisposable
     [Fact]
     public async Task UploadCameraImage_SavesDescription()
     {
-        var response = await PostCameraImageAsync(TestImages.ToDataUrl(TestImages.Create(60, 40)), "camera description");
+        var response = await PostCameraImageAsync(TestImages.Create(60, 40).ToDataUrl(), "camera description");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         var image = Assert.Single(factory.GetImages());
@@ -143,6 +143,72 @@ public partial class ImagesControllerTests : IDisposable
 
         var originalResponse = await client.GetAsync($"/Images/Original/{id}");
         Assert.Equal(original, await originalResponse.Content.ReadAsByteArrayAsync());
+    }
+
+    [Fact]
+    public async Task Index_ShowsOnlyThumbnailsAndLinksToOriginals()
+    {
+        await PostFileAsync(TestImages.Create(400, 200));
+        var id = Assert.Single(factory.GetImages()).Id;
+
+        var html = await client.GetStringAsync("/");
+
+        Assert.Contains($"src=\"/Images/Thumbnail/{id}\"", html);
+        Assert.Contains($"href=\"/Images/Original/{id}\"", html);
+        Assert.DoesNotContain($"src=\"/Images/Original/{id}\"", html);
+    }
+
+    async Task<HttpResponseMessage> PostDeleteAsync(int id, bool withToken = true)
+    {
+        var fields = new Dictionary<string, string>();
+        if (withToken)
+            fields["__RequestVerificationToken"] = await GetAntiforgeryTokenAsync();
+        using var content = new FormUrlEncodedContent(fields);
+        return await client.PostAsync($"/Images/Delete/{id}?page=1", content);
+    }
+
+    [Fact]
+    public async Task Index_ShowsDeleteFormForEachImage()
+    {
+        await PostFileAsync(TestImages.Create(10, 10));
+        var id = Assert.Single(factory.GetImages()).Id;
+
+        var html = await client.GetStringAsync("/");
+
+        Assert.Contains($"action=\"/Images/Delete/{id}?page=1\"", html);
+    }
+
+    [Fact]
+    public async Task Delete_RemovesImageAndThumbnail()
+    {
+        await PostFileAsync(TestImages.Create(10, 10));
+        var id = Assert.Single(factory.GetImages()).Id;
+
+        var response = await PostDeleteAsync(id);
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Empty(factory.GetImages());
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/Images/Thumbnail/{id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/Images/Original/{id}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_WithoutAntiforgeryToken_IsRejected()
+    {
+        await PostFileAsync(TestImages.Create(10, 10));
+        var id = Assert.Single(factory.GetImages()).Id;
+
+        var response = await PostDeleteAsync(id, withToken: false);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Single(factory.GetImages());
+    }
+
+    [Fact]
+    public async Task Delete_UnknownId_ReturnsNotFound()
+    {
+        var response = await PostDeleteAsync(12345);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

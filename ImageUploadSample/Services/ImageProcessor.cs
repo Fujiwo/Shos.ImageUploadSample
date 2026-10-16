@@ -43,28 +43,33 @@ public static partial class ImageProcessor
         if (!supportedFormats.TryGetValue(codec.EncodedFormat, out var mimeType))
             throw new InvalidImageException("Unsupported image format.");
 
-        var (width, height) = (codec.Info.Width, codec.Info.Height);
+        var (width, height) = codec.Size;
         if (width <= 0 || height <= 0)
             throw new InvalidImageException("Invalid image.");
         if (width > MaximumDimension || height > MaximumDimension)
             throw new InvalidImageException("Too large image dimensions.");
 
         var (thumbnailWidth, thumbnailHeight) = GetThumbnailSize(width, height);
-        var thumbnailData = CreateThumbnail(codec, thumbnailWidth, thumbnailHeight);
+        var thumbnailData = codec.CreateThumbnail(thumbnailWidth, thumbnailHeight);
         return new(mimeType, width, height, thumbnailData, thumbnailWidth, thumbnailHeight);
     }
 
     public static (int width, int height) GetThumbnailSize(int width, int height)
         => (Math.Max(1, (int)Math.Round((double)ThumbnailSize * width / height)), ThumbnailSize);
 
-    static byte[] CreateThumbnail(SKCodec codec, int width, int height)
+    extension(SKCodec codec)
     {
-        using var bitmap = SKBitmap.Decode(codec) ?? throw new InvalidImageException("Invalid image.");
-        using var thumbnail = bitmap.Resize(new SKImageInfo(width, height), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear))
-                              ?? throw new InvalidImageException("Invalid image.");
-        using var image = SKImage.FromBitmap(thumbnail);
-        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-        return data.ToArray();
+        (int Width, int Height) Size => (codec.Info.Width, codec.Info.Height);
+
+        byte[] CreateThumbnail(int width, int height)
+        {
+            using var bitmap = SKBitmap.Decode(codec) ?? throw new InvalidImageException("Invalid image.");
+            using var thumbnail = bitmap.Resize(new SKImageInfo(width, height), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear))
+                                  ?? throw new InvalidImageException("Invalid image.");
+            using var image = SKImage.FromBitmap(thumbnail);
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            return data.ToArray();
+        }
     }
 
     [GeneratedRegex(@"^data:image/(png|jpeg|gif|bmp|webp);base64,", RegexOptions.CultureInvariant)]

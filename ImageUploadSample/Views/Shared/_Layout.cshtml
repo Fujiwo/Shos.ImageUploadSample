@@ -9,6 +9,13 @@
     <link rel="stylesheet" href="~/ImageUploadSample.styles.css" asp-append-version="true" />
 </head>
 <body>
+    <header>
+        <nav class="navbar navbar-light bg-light border-bottom mb-3">
+            <div class="container">
+                <a class="navbar-brand" asp-controller="Images" asp-action="Upload">ImageUploadSample</a>
+            </div>
+        </nav>
+    </header>
     <div class="container">
         <main role="main" class="pb-3">
             @RenderBody()

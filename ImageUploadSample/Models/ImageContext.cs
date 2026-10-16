@@ -25,5 +25,5 @@ public class ImageRecord
 
 public class ImageContext(DbContextOptions<ImageContext> options) : DbContext(options)
 {
-    public DbSet<ImageRecord> Images { get; set; } = null!;
+    public DbSet<ImageRecord> Images => Set<ImageRecord>();
 }

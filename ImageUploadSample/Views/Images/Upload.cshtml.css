@@ -1,0 +1,4 @@
+/* Fits thumbnails of any aspect ratio into the fixed-ratio box of the card. */
+.thumbnail-image {
+    object-fit: contain;
+}
