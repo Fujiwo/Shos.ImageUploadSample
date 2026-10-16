@@ -146,6 +146,19 @@ public partial class ImagesControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Index_ShowsOnlyThumbnailsAndLinksToOriginals()
+    {
+        await PostFileAsync(TestImages.Create(400, 200));
+        var id = Assert.Single(factory.GetImages()).Id;
+
+        var html = await client.GetStringAsync("/");
+
+        Assert.Contains($"<img src=\"/Images/Thumbnail/{id}\"", html);
+        Assert.Contains($"href=\"/Images/Original/{id}\"", html);
+        Assert.DoesNotContain($"src=\"/Images/Original/{id}\"", html);
+    }
+
+    [Fact]
     public async Task Thumbnail_UnknownId_ReturnsNotFound()
     {
         var response = await client.GetAsync("/Images/Thumbnail/12345");

@@ -9,8 +9,11 @@
     <hr>
     <div class="row">
         @foreach (var image in Model.Images) {
-            <div class="col-md-1">
-                <a href="#image@(image.Id)" class="thumbnail">
+            <div class="col-auto">
+                @* Without JavaScript, the link opens the original image directly. *@
+                <a href="@Url.Action("Original", new { id = image.Id })" target="_blank"
+                   data-bs-toggle="modal" data-bs-target="#originalModal"
+                   data-caption="@image.AlternativeText" data-width="@image.Width" data-height="@image.Height">
                     <img src="@Url.Action("Thumbnail", new { id = image.Id })" width="@(image.ThumbnailWidth)" height="@(image.ThumbnailHeight)" alt="@image.AlternativeText" class="img-thumbnail" />
                 </a>
             </div>
@@ -28,17 +31,21 @@
         </nav>
     }
     <hr>
-    <div>
-        @foreach (var image in Model.Images) {
-            <div id="image@(image.Id)">
-                <figure class="figure">
-                    <img src="@Url.Action("Original", new { id = image.Id })" width="@(image.Width)" height="@(image.Height)" alt="@(image.AlternativeText)" class="card-img-top" loading="lazy" />
-                    <figcaption class="figure-caption">@image.AlternativeText</figcaption>
-                </figure>
+</div>
+
+@* Shared by all thumbnails. The original image is loaded only when the modal is opened. *@
+<div class="modal fade" id="originalModal" tabindex="-1" aria-labelledby="originalModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="originalModalLabel"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-        }
+            <div class="modal-body text-center">
+                <img id="originalImage" class="img-fluid" alt="">
+            </div>
+        </div>
     </div>
-    <hr>
 </div>
 
 <form method="post" enctype="multipart/form-data">
@@ -81,6 +88,28 @@
         document.querySelector('#camera').addEventListener('click', startCamera)
         document.querySelector('#snap').addEventListener('click', snap)
         document.querySelector('#uploadPicture').addEventListener('click', upload)
+
+        const originalModal = document.querySelector('#originalModal')
+        originalModal.addEventListener('show.bs.modal', showOriginal)
+        originalModal.addEventListener('hidden.bs.modal', clearOriginal)
+    }
+
+    function showOriginal(e) {
+        const link          = e.relatedTarget
+        const originalImage = document.querySelector('#originalImage')
+
+        // Sets the size first to keep the aspect ratio while loading.
+        originalImage.width  = link.dataset.width
+        originalImage.height = link.dataset.height
+        originalImage.alt    = link.dataset.caption
+        originalImage.src    = link.href
+        // textContent, not innerHTML: the description is user input.
+        document.querySelector('#originalModalLabel').textContent = link.dataset.caption
+    }
+
+    // Prevents the previous image from flashing when the modal is opened next time.
+    function clearOriginal() {
+        document.querySelector('#originalImage').removeAttribute('src')
     }
 
     function stopCamera() {
