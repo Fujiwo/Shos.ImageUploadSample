@@ -31,14 +31,16 @@
         <div class="card h-100">
             <div class="card-header">Camera</div>
             <div class="card-body">
-                @* Not submitted: the script below sends the snapshot with fetch.
+                @* Not submitted: upload.js sends the snapshot with fetch.
                    The form is here so that the tag helper renders the antiforgery token the script reads. *@
                 <form>
                     @* Camera -> Snap -> Upload. The script shows and hides these buttons and previews at each step. *@
                     <div class="d-flex flex-wrap gap-2 mb-3">
                         <button type="button" id="camera" class="btn btn-primary">Camera</button>
                         <button type="button" id="snap" class="btn btn-secondary" hidden="hidden">Snap</button>
-                        <button type="button" id="uploadPicture" class="btn btn-success" hidden="hidden">Upload</button>
+                        @* upload.js is a static file, so Razor cannot expand @Url.Action in it. The URLs it needs come from here. *@
+                        <button type="button" id="uploadPicture" class="btn btn-success" hidden="hidden"
+                                data-upload-url="@Url.Action("UploadCameraImage")" data-list-url="@Url.Action("Upload")">Upload</button>
                     </div>
                     @* The canvas keeps 600x400 pixels; CSS only scales how they are displayed. *@
                     <div id="videoPreview" class="mb-3" hidden="hidden">

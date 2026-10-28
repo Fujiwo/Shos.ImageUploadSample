@@ -30,10 +30,8 @@ CI (`.github/workflows/build.yml`) runs restore, build, test, and a vulnerable-p
 
 - The default route is `{controller=Images}/{action=Upload}/{id?}`. `ImagesController` is the only controller and also hosts `Error` (the non-Development exception handler is `/Images/Error`).
 - `Services/ImageProcessor.cs` holds all image logic: header-only dimension check (max 2 MB, max 8000px per side, max 16 megapixels in total), format detection (the MIME type comes from the content, not from the client), single decode for the aspect-ratio-preserving PNG thumbnail (bounded to 800 × 100 px), and strict `data:image/...;base64,` parsing. Failures throw `InvalidImageException`, which the controller turns into 400.
-- `ImagesController` upload paths both go through `Save`:
-  - `POST Upload(IFormFile file, string description)`: a multipart form, redirects to the list.
-  - `POST UploadCameraImage(string imageBase64, string description)`: called by jQuery `$.ajax` from inline JS in `Views/Images/Upload.cshtml`, and returns 204.
-- Antiforgery validation is global (`AutoValidateAntiforgeryTokenAttribute`). The camera Ajax call sends the token in the `RequestVerificationToken` header.
+- Both upload actions go through `Save`: `POST Upload` (multipart form, redirects to the list) and `POST UploadCameraImage` (base64, called by `fetch` in `wwwroot/js/upload.js`, returns 204).
+- Antiforgery validation is global (`AutoValidateAntiforgeryTokenAttribute`). The camera `fetch` call sends the token in the `RequestVerificationToken` header.
 - The list (`GET Upload?page=n`) projects to `ImageSummary` (no blobs) with 24 items per page. Images are served by `GET Images/Thumbnail/{id}` and `GET Images/Original/{id}`. `POST Images/Delete/{id}?page=n` deletes the row (thumbnail and original together) with `ExecuteDeleteAsync`; the list asks for confirmation in JS first.
 - `Models/ImageContext.cs` holds the `ImageRecord` entity (table `Images`) and `ImageContext`, which takes options only. The connection string comes solely from `ConnectionStrings:ImageContext`, and `dotnet ef` picks it up through `Program.cs`.
 - Integration tests (`TestApplicationFactory`) swap the SQL Server registration for in-memory SQLite by removing `DbContextOptions<ImageContext>` and `IDbContextOptionsConfiguration<ImageContext>`.
