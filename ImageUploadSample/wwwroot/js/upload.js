@@ -123,7 +123,8 @@ async function upload(e) {
     uploadButton.disabled = true
 
     try {
-        const response = await fetch('@Url.Action("UploadCameraImage")', {
+        // The view renders the URLs into data attributes (data-upload-url, data-list-url) on the Upload button.
+        const response = await fetch(uploadButton.dataset.uploadUrl, {
             method: 'POST',
             headers: { RequestVerificationToken: token },
             body: new URLSearchParams({
@@ -139,7 +140,7 @@ async function upload(e) {
         }
 
         // Reloads the first page, where the new image appears.
-        location.href = '@Url.Action("Upload")'
+        location.href = uploadButton.dataset.listUrl
     } catch (error) {
         alert('Upload failed: ' + (error instanceof Error ? error.message : String(error)))
     } finally {

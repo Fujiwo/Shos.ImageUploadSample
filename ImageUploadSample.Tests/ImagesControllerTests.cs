@@ -228,4 +228,27 @@ public partial class ImagesControllerTests : IDisposable
         var response = await client.GetAsync("/Images/Thumbnail/12345");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+
+    // Matches a Razor expression such as @Url.Action(...), which only a .cshtml view expands.
+    [GeneratedRegex(@"@(Url|Html|Model|ViewData|ViewBag)\.")]
+    private static partial Regex RazorExpressionPattern();
+
+    // wwwroot/js/upload.js is served as is, so a Razor expression in it reaches the browser unexpanded:
+    // fetch('@Url.Action("UploadCameraImage")') then posts to a URL with no route, and the camera upload gets 404.
+    [Fact]
+    public async Task UploadScript_ContainsNoRazorExpressions()
+    {
+        var script = await client.GetStringAsync("/js/upload.js");
+        Assert.DoesNotMatch(RazorExpressionPattern(), script);
+    }
+
+    // upload.js reads the URLs to post to and to reload from these data attributes instead.
+    [Fact]
+    public async Task Index_RendersCameraUploadUrls()
+    {
+        var html = await client.GetStringAsync("/");
+
+        Assert.Contains(@"data-upload-url=""/Images/UploadCameraImage""", html);
+        Assert.Contains(@"data-list-url=""/""", html);
+    }
 }
